@@ -1,5 +1,5 @@
-#ifndef TASK_STATE_HPP
-#define TASK_STATE_HPP
+#ifndef TASK_STATUS_HPP
+#define TASK_STATUS_HPP
 
 #include <mutex>
 #include <chrono>
@@ -16,12 +16,12 @@ struct TaskStatusData
     std::chrono::high_resolution_clock::time_point timestamp;
 };
 
-class TaskState
+class TaskStatus
 {
 public:
-    TaskState() = default;
+    TaskStatus() = default;
 
-    void update(const TaskStatusData& new_state);
+    void update(const TaskStatusData& new_status);
 
     bool getLatest(TaskStatusData& out) const;
 
@@ -31,4 +31,4 @@ private:
     uint64_t sequence_counter_ = 0;
 };
 
-#endif // TASK_STATE_HPP
+#endif // TASK_STATUS_HPP

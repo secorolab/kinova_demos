@@ -1,0 +1,172 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <chrono>
+#include <memory>
+#include <string>
+#include <vector>
+#include <filesystem>
+#include <atomic>
+
+#include <geometry_msgs/msg/twist.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include "sensor_msgs/msg/joint_state.hpp"
+
+#include <kdl_parser/kdl_parser.hpp>
+
+#include "kdl/chain.hpp"
+#include "kdl/frames.hpp"
+#include "kdl/kinfam_io.hpp"
+#include "kdl/frames_io.hpp"
+#include "kdl/jntarray.hpp"
+#include "kdl/jacobian.hpp"
+#include "kdl/chainfksolverpos_recursive.hpp"
+#include "kdl/chainfksolvervel_recursive.hpp"
+#include "kdl/chainjnttojacdotsolver.hpp"
+#include "kdl/chainiksolvervel_pinv.hpp"
+#include "kdl/chainidsolver_recursive_newton_euler.hpp"
+
+#include "robif2b/functions/ethercat.h"
+#include "robif2b/functions/kinova_gen3.h"
+
+#include "grc26/kinova_single_arm_demo.fsm.hpp"
+#include "grc26/pid_controller.hpp"
+#include "grc26/cartesian_motion_setpoint.hpp"
+#include "grc26/fsm_interface.hpp"
+
+#define NUM_JOINTS 7
+
+#define KINOVA_TAU_CMD_LIMIT 30.0
+
+FSMInterface::FSMInterface(robif2b_kinova_gen3_nbx& rob)
+  : rob(rob), arm_configured_(false)
+{
+
+}
+
+FSMInterface::~FSMInterface() {
+}
+
+int FSMInterface::get_current_state() const
+{
+    return fsm.currentStateIndex;
+}
+// FSM methods
+void FSMInterface::configure(events *eventData, ArmState& arm_state){
+  // establish communication with arm
+  robif2b_kinova_gen3_configure(&rob);
+  if (!rob.success) {
+      printf("Error during gen3_configure\n");
+      robif2b_kinova_gen3_shutdown(&rob);
+      if (!rob.success) {
+          printf("Error during gen3_shutdown\n");
+      }
+  }
+
+  robif2b_kinova_gen3_recover(&rob);
+  if (!rob.success) {
+      printf("Error during gen3_recover\n");
+      robif2b_kinova_gen3_shutdown(&rob);
+      if (!rob.success) {
+          printf("Error during gen3_shutdown\n");
+      }
+  }
+
+  printf("Starting\n");
+  robif2b_kinova_gen3_start(&rob);
+  if (!rob.success) {
+      printf("Error during gen3_start\n");
+      robif2b_kinova_gen3_stop(&rob);
+      printf("Stopped\n");
+  }
+
+  arm_configured_ = true;
+  produce_event(eventData, E_CONFIGURED);
+}
+
+void FSMInterface::idle(events *eventData, const ArmState& arm_state){
+
+}
+
+void FSMInterface::execute(events *eventData, ArmState& arm_state){
+
+}
+
+void FSMInterface::touch_table_behavior_config(events *eventData, ArmState& arm_state){
+  sp.translation_mode = ControlMode::Velocity;
+  sp.rotation_mode    = ControlMode::Position;
+  sp.gripper_mode    = ControlMode::None;
+  sp.linear_vel = Eigen::Vector3d(0.0, 0.0, -0.01); // m/s
+  sp.orientation = Eigen::Vector3d(0.0, 0.0, 0.0); // roll, pitch, yaw
+
+  produce_event(eventData, E_M_SLIDE_ALONG_TABLE_CONFIGURED);
+}
+
+void FSMInterface::slide_on_table_behavior_config(events *eventData, ArmState& arm_state){
+  sp.translation_mode = ControlMode::Velocity;
+  sp.rotation_mode    = ControlMode::Position;
+  sp.gripper_mode    = ControlMode::None;
+  sp.linear_vel = Eigen::Vector3d(0.0, 0.0, -0.01); // m/s
+  sp.orientation = Eigen::Vector3d(0.0, 0.0, 0.0); // roll, pitch, yaw
+
+  produce_event(eventData, E_M_TOUCH_TABLE_CONFIGURED);
+}
+
+void FSMInterface::grasp_object_behavior_config(events *eventData, ArmState& arm_state){
+  sp.translation_mode = ControlMode::Velocity;
+  sp.rotation_mode    = ControlMode::Position;
+  sp.gripper_mode    = ControlMode::Position;
+  sp.linear_vel = Eigen::Vector3d(0.0, 0.0, -0.01); // m/s
+  sp.orientation = Eigen::Vector3d(0.0, 0.0, 0.0); // roll, pitch, yaw
+  sp.gripper_position = 1.0; // fully closed
+
+  produce_event(eventData, E_M_GRASP_OBJECT_CONFIGURED);
+}
+
+void FSMInterface::collaborate_behavior_config(events *eventData, ArmState& arm_state){
+  sp.translation_mode = ControlMode::Effort;
+  sp.rotation_mode    = ControlMode::Effort;
+  sp.gripper_mode    = ControlMode::Position;
+  sp.feedforward_force = Eigen::Vector3d(0.0, 0.0, 0.0); // Newton
+  sp.feedforward_torque = Eigen::Vector3d(0.0, 0.0, 0.0); // Newton-meter
+  sp.gripper_position = 1.0; // fully closed
+
+  produce_event(eventData, E_M_COLLABORATE_CONFIGURED);
+}
+
+void FSMInterface::release_object_behavior_config(events *eventData, ArmState& arm_state){
+  sp.translation_mode = ControlMode::None;
+  sp.rotation_mode    = ControlMode::None;
+  sp.gripper_mode    = ControlMode::Position;
+  sp.gripper_position = 0.0; // fully open
+
+  produce_event(eventData, E_M_RELEASE_OBJECT_CONFIGURED);
+}
+
+// decision of which behavior to execute based on events and arm state
+void FSMInterface::fsm_behavior(events *eventData, ArmState& arm_state){
+  if (consume_event(eventData, E_CONFIGURED)) {
+      idle(eventData, arm_state);
+  }
+
+  if (consume_event(eventData, E_EXECUTE_IDLE)) {
+      execute(eventData, arm_state);
+  }
+}
+
+void FSMInterface::compute_gravity_comp(events *eventData, ArmState& arm_state){
+
+}
+
+void FSMInterface::compute_cartesian_ctrl(events *eventData, ArmState& arm_state){
+
+}
+
+void FSMInterface::run_fsm(){
+  produce_event(&eventData, E_STEP);
+  fsm_behavior(&eventData, arm_state);
+  fsm_step_nbx(&fsm);
+  reconfig_event_buffers(&eventData);
+};

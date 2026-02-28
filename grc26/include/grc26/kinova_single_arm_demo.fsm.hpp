@@ -63,6 +63,7 @@ enum e_states {
     S_M_SLIDE_ALONG_TABLE,
     S_M_GRASP_OBJECT,
     S_M_COLLABORATE,
+    S_M_RELEASE_OBJECT,
     NUM_STATES
 };
 
@@ -82,6 +83,8 @@ enum e_events {
     E_M_GRASP_OBJECT_CONFIGURED,
     E_M_COLLABORATE_CONFIG,
     E_M_COLLABORATE_CONFIGURED,
+    E_M_RELEASE_OBJECT_CONFIG,
+    E_M_RELEASE_OBJECT_CONFIGURED,
     NUM_EVENTS
 };
 
@@ -103,6 +106,8 @@ enum e_transitions {
     T_M_GRASP_OBJECT_EXECUTE,
     T_EXECUTE_M_COLLABORATE,
     T_M_COLLABORATE_EXECUTE,
+    T_EXECUTE_M_RELEASE_OBJECT,
+    T_M_RELEASE_OBJECT_EXECUTE,
     NUM_TRANSITIONS
 };
 
@@ -121,6 +126,7 @@ enum e_reactions {
     R_E_M_SLIDE_ALONG_TABLE_CONFIGURED,
     R_E_M_GRASP_OBJECT_CONFIGURED,
     R_E_M_COLLABORATE_CONFIGURED,
+    R_E_M_RELEASE_OBJECT_CONFIGURED,
     R_E_STEP_START,
     R_E_STEP_IDLE,
     R_E_STEP_EXECUTE,
@@ -137,7 +143,8 @@ inline struct state states[NUM_STATES] = {
     {.name = "S_m_touch_table"}, 
     {.name = "S_m_slide_along_table"}, 
     {.name = "S_m_grasp_object"}, 
-    {.name = "S_m_collaborate"} 
+    {.name = "S_m_collaborate"}, 
+    {.name = "S_m_release_object"} 
 };
 
 // sm transition table
@@ -204,6 +211,14 @@ inline struct transition transitions[NUM_TRANSITIONS] = {
     }, 
     {
         .startStateIndex = S_M_COLLABORATE,
+        .endStateIndex = S_EXECUTE,
+    }, 
+    {
+        .startStateIndex = S_EXECUTE,
+        .endStateIndex = S_M_RELEASE_OBJECT,
+    }, 
+    {
+        .startStateIndex = S_M_RELEASE_OBJECT,
         .endStateIndex = S_EXECUTE,
     } 
 };
@@ -297,6 +312,13 @@ inline struct event_reaction reactions[NUM_REACTIONS] = {
     {
         .conditionEventIndex = E_M_COLLABORATE_CONFIGURED,
         .transitionIndex = T_M_COLLABORATE_EXECUTE,
+        .numFiredEvents = 0,
+        .firedEventIndices = nullptr,
+
+    }, 
+    {
+        .conditionEventIndex = E_M_RELEASE_OBJECT_CONFIGURED,
+        .transitionIndex = T_M_RELEASE_OBJECT_EXECUTE,
         .numFiredEvents = 0,
         .firedEventIndices = nullptr,
 
