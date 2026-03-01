@@ -37,4 +37,21 @@ git clone --depth=1 https://github.com/secorolab/grc26_kinova_demo.git
 ```shell
 vcs import src < src/grc26_kinova_demo/grc26.repos
 ```
+### setup flags
+
+copy the [colcon.meta](colcon.meta) to the ros2 workspace folder.
+
+```shell
+cd ~/grc26
+
+cp src/grc26_kinova_demo/colcon.meta .
+```
+
+### build
+
+```shell
+cd ~/grc26
+
+colcon build
+```
 

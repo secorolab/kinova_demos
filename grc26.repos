@@ -15,6 +15,10 @@ repositories:
     type: git
     url: git@github.com:secorolab/orocos_kinematics_dynamics.git
     version: feature/achd_fixed_joint
+  robif2b:
+    type: git
+    url: git@github.com:Robots4Sustainability/robif2b.git
+    version: feature/robotiq-ft-300-s-support
   thirdparty/ros2_kortex:
     type: git
     url: https://github.com/Kinovarobotics/ros2_kortex.git
