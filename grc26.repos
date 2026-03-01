@@ -9,7 +9,7 @@ repositories:
     version: main
   moveit_client:
     type: git
-    url: git@github.com:secorolab/kinova_moveit_client.git
+    url: git@github.com:secorolab/moveit_client.git
     version: master
   orocos_kinematics_dynamics:
     type: git
