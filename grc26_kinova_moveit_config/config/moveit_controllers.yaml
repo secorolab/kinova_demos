@@ -1,0 +1,47 @@
+# MoveIt uses this configuration for controller management
+
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+moveit_simple_controller_manager:
+  controller_names:
+    - kinova1_controller
+    - kinova2_controller
+    - g1_controller
+    - g2_controller
+
+  kinova1_controller:
+    type: FollowJointTrajectory
+    joints:
+      - kinova1_joint_1
+      - kinova1_joint_2
+      - kinova1_joint_3
+      - kinova1_joint_4
+      - kinova1_joint_5
+      - kinova1_joint_6
+      - kinova1_joint_7
+    action_ns: follow_joint_trajectory
+    default: true
+  kinova2_controller:
+    type: FollowJointTrajectory
+    joints:
+      - kinova2_joint_1
+      - kinova2_joint_2
+      - kinova2_joint_3
+      - kinova2_joint_4
+      - kinova2_joint_5
+      - kinova2_joint_6
+      - kinova2_joint_7
+    action_ns: follow_joint_trajectory
+    default: true
+  g1_controller:
+    type: GripperCommand
+    joints:
+      - kinova1_robotiq_85_left_knuckle_joint
+    action_ns: gripper_cmd
+    default: true
+  g2_controller:
+    type: GripperCommand
+    joints:
+      - kinova2_robotiq_85_left_knuckle_joint
+    action_ns: gripper_cmd
+    default: true

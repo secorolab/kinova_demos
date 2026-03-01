@@ -1,0 +1,72 @@
+# This config file is used by ros2_control
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    kinova1_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    kinova2_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    g1_controller:
+      type: position_controllers/GripperActionController
+
+    g2_controller:
+      type: position_controllers/GripperActionController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+kinova1_controller:
+  ros__parameters:
+    joints:
+      - kinova1_joint_1
+      - kinova1_joint_2
+      - kinova1_joint_3
+      - kinova1_joint_4
+      - kinova1_joint_5
+      - kinova1_joint_6
+      - kinova1_joint_7
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    allow_nonzero_velocity_at_trajectory_end: true
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.0
+      goal_time: 0.0
+kinova2_controller:
+  ros__parameters:
+    joints:
+      - kinova2_joint_1
+      - kinova2_joint_2
+      - kinova2_joint_3
+      - kinova2_joint_4
+      - kinova2_joint_5
+      - kinova2_joint_6
+      - kinova2_joint_7
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    allow_nonzero_velocity_at_trajectory_end: true
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.0
+      goal_time: 0.0
+g1_controller:
+  ros__parameters:
+    joint: kinova1_robotiq_85_left_knuckle_joint
+    allow_scaling: true
+g2_controller:
+  ros__parameters:
+    joint: kinova2_robotiq_85_left_knuckle_joint
+    allow_scaling: true

@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: grc26_kinova_moveit_config
+    relative_path: config/pick_place.urdf
+  srdf:
+    relative_path: config/gen3_2f_85_pick_place.srdf
+  package_settings:
+    author_name: ""
+    author_email: vamsikalagaturu@gmail.com
+    generated_timestamp: 1772122210
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
