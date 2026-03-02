@@ -10,9 +10,11 @@
 #include "grc26/task_status.hpp"
 #include "grc26/task_status_node.hpp"
 #include "grc26/msg/task_status.hpp"
+#include "grc26/fsm_interface.hpp"
+#include "grc26/system_state.hpp"
+#include "grc26/hardware_binding.hpp"
 #include "robif2b/functions/kinova_gen3.h"
 #include "grc26/kinova_single_arm_demo.fsm.hpp"
-#include "grc26/fsm_interface.hpp"
 
 
 #define LOG_INFO(node, msg, ...) RCLCPP_INFO(node->get_logger(), msg, ##__VA_ARGS__)
@@ -40,46 +42,29 @@ int main(int argc, char ** argv)
   
   // --------------------- robot communication setup ---------------------
 
+  SystemState system_state;
   bool success = false;
   double cycle_time = 0.001;
   enum robif2b_ctrl_mode ctrl_mode = ROBIF2B_CTRL_MODE_FORCE;
-  double pos_msr[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double vel_msr[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double eff_msr[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double cur_msr[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double pos_cmd[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double vel_cmd[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double eff_cmd[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double cur_cmd[] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-  double imu_ang_vel_msr[] = { 0.0, 0.0, 0.0 };
-  double imu_lin_acc_msr[] = { 0.0, 0.0, 0.0 };
+  robif2b_kinova_gen3_nbx arm;
+  arm.conf = {
+            .ip_address = "192.168.1.10",
+            .port = 10000,
+            .port_real_time = 10001,
+            .user = "admin",
+            .password = "admin",
+            .session_timeout = 60000,
+            .connection_timeout = 2000
+        };
+  bindKinovaArm(arm, system_state);
 
-  struct robif2b_kinova_gen3_nbx rob = {
-      // Configuration
-      .conf = {
-          .ip_address = "192.168.1.10",
-          .port = 10000,
-          .port_real_time = 10001,
-          .user = "admin",
-          .password = "admin",
-          .session_timeout = 60000,
-          .connection_timeout = 2000
-      },
-      // Connections
-      .cycle_time = &cycle_time,
-      .ctrl_mode = &ctrl_mode,
-      .jnt_pos_msr = pos_msr,
-      .jnt_vel_msr = vel_msr,
-      .jnt_trq_msr = eff_msr,
-      .act_cur_msr = cur_msr,
-      .jnt_pos_cmd = pos_cmd,
-      .jnt_vel_cmd = vel_cmd,
-      .jnt_trq_cmd = eff_cmd,
-      .act_cur_cmd = cur_cmd,
-      .imu_ang_vel_msr = imu_ang_vel_msr,
-      .imu_lin_acc_msr = imu_lin_acc_msr,
-      .success = &success
-  };
+  robif2b_kg3_robotiq_gripper_nbx gripper;
+  bindRobotiqGripper(gripper, system_state);
+
+  robif2b_robotiq_ft_nbx ft_sensor;
+  ft_sensor.conf.device = "/dev/ttyUSB0";
+  ft_sensor.conf.baudrate = 19200;
+  bindRobotiqFT(ft_sensor, system_state);
 
   // --------------------- ROS related ---------------------
 
@@ -89,7 +74,7 @@ int main(int argc, char ** argv)
 
   
   auto task_status = std::make_shared<TaskStatus>();
-  auto fsm_interface = std::make_shared<FSMInterface>(rob);
+  auto fsm_interface = std::make_shared<FSMInterface>(arm, system_state);
 
   auto node = std::make_shared<TaskStatusROSNode>(task_status);
   // TODO: initialise action server node here
@@ -122,23 +107,32 @@ int main(int argc, char ** argv)
     n++;
 
     if (fsm_interface->get_current_state() == S_EXIT) {
-        LOG_INFO(node, "FSM reached exit state, breaking control loop");
-        break;
+      LOG_INFO(node, "FSM reached exit state, breaking control loop");
+      break;
     }
 
     while (now < deadline) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1000)); // sleep for 1 ms to avoid busy waiting
-        now = std::chrono::high_resolution_clock::now();
+      std::this_thread::sleep_for(std::chrono::microseconds(1000)); // sleep for 1 ms to avoid busy waiting
+      now = std::chrono::high_resolution_clock::now();
     }
     while (deadline < now) {
-        deadline += desired_loop_rate;
+      deadline += desired_loop_rate;
     }
   }
 
   if (fsm_interface->is_in_comm_with_hw() == true) {
-      std::cout << "Shutting down arm..." << std::endl;
-      robif2b_kinova_gen3_stop(&rob);
-      robif2b_kinova_gen3_shutdown(&rob);
+    if (system_state.ft_sensor.present) {
+      std::cout << "Stopping FT sensor..." << std::endl;
+    //   robif2b_robotiq_ft_stop(&ft_sensor);
+    //   robif2b_robotiq_ft_shutdown(&ft_sensor);
+    }
+    if (system_state.gripper.present) {
+      std::cout << "Stopping gripper..." << std::endl;
+      robif2b_kg3_robotiq_gripper_stop(&gripper);
+    }
+    std::cout << "Shutting down arm..." << std::endl;
+    robif2b_kinova_gen3_stop(&arm);
+    robif2b_kinova_gen3_shutdown(&arm);
   }
 
   std::cout << "Shutting down node..." << std::endl;

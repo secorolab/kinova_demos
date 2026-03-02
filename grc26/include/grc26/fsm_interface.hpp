@@ -36,10 +36,11 @@
 #include "robif2b/functions/kinova_gen3.h"
 
 #include "grc26/kinova_single_arm_demo.fsm.hpp"
-#include "grc26/pid_controller.hpp"
 #include "grc26/cartesian_motion_setpoint.hpp"
+#include "grc26/pid_controller.hpp"
 #include "robif2b/functions/kinova_gen3.h"
-#include "grc26/arm_state.hpp"
+#include "grc26/system_state.hpp"
+#include "grc26/arm_kdl_model.hpp"
 
 #define NUM_JOINTS 7
 
@@ -49,29 +50,29 @@
 class FSMInterface
 {
 public:
-    explicit FSMInterface(robif2b_kinova_gen3_nbx& rob);
+    explicit FSMInterface(robif2b_kinova_gen3_nbx& rob, SystemState& system_state);
     ~FSMInterface();
 
     int get_current_state() const;
     bool is_in_comm_with_hw() const;
 
     // FSM methods
-    void configure(events *eventData, ArmState& arm_state);
-    void idle(events *eventData, const ArmState& arm_state);
-    void execute(events *eventData, ArmState& arm_state);
+    void configure(events *eventData, SystemState& system_state);
+    void idle(events *eventData, const SystemState& system_state);
+    void execute(events *eventData, SystemState& system_state);
 
-    void touch_table_behavior_config(events *eventData, ArmState& arm_state);
-    void slide_on_table_behavior_config(events *eventData, ArmState& arm_state);
-    void grasp_object_behavior_config(events *eventData, ArmState& arm_state);
-    void collaborate_behavior_config(events *eventData, ArmState& arm_state);
-    void release_object_behavior_config(events *eventData, ArmState& arm_state);
+    void touch_table_behavior_config(events *eventData, SystemState& system_state);
+    void slide_on_table_behavior_config(events *eventData, SystemState& system_state);
+    void grasp_object_behavior_config(events *eventData, SystemState& system_state);
+    void collaborate_behavior_config(events *eventData, SystemState& system_state);
+    void release_object_behavior_config(events *eventData, SystemState& system_state);
 
     // decision of which behavior to execute based on events and arm state
-    void fsm_behavior(events *eventData, ArmState& arm_state);
+    void fsm_behavior(events *eventData, SystemState& system_state);
 
-    void compute_gravity_comp(events *eventData, ArmState& arm_state);
-    void compute_cartesian_ctrl(events *eventData, ArmState& arm_state);
-    void exit(events *eventData, ArmState& arm_state);
+    void compute_gravity_comp(events *eventData, SystemState& system_state);
+    void compute_cartesian_ctrl(events *eventData, SystemState& system_state);
+    void exit(events *eventData, SystemState& system_state);
     void run_fsm();
 
 public:
@@ -100,7 +101,7 @@ private:
     KDL::Twist twist_ee;
     KDL::Frame target_pose_ee;
 
-    ArmState arm_state;
+    SystemState system_state;
 };
 
 #endif // FSM_INTERFACE_HPP

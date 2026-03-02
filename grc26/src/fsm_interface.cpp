@@ -30,16 +30,13 @@
 
 #include "robif2b/functions/kinova_gen3.h"
 #include "grc26/fsm_interface.hpp"
-#include "grc26/pid_controller.hpp"
-#include "grc26/cartesian_motion_setpoint.hpp"
-#include "grc26/kinova_single_arm_demo.fsm.hpp"
 
 #define NUM_JOINTS 7
 
 #define KINOVA_TAU_CMD_LIMIT 30.0
 
-FSMInterface::FSMInterface(robif2b_kinova_gen3_nbx& rob)
-  : rob(rob), in_comm_with_hw(false)
+FSMInterface::FSMInterface(robif2b_kinova_gen3_nbx& rob, SystemState& system_state)
+  : rob(rob), system_state(system_state), in_comm_with_hw(false)
 {
 
 }
@@ -57,44 +54,23 @@ bool FSMInterface::is_in_comm_with_hw() const
     return in_comm_with_hw;
 }
 
-void FSMInterface::configure(events *eventData, ArmState& arm_state){
+void FSMInterface::configure(events *eventData, SystemState& system_state){
 
-  // load kinematic tree and extract chain
-  std::string urdf_file = "GEN3_URDF_V12.urdf";
-  std::string urdf_path = ament_index_cpp::get_package_share_directory("grc26") + "/urdf/" + urdf_file;
-  KDL::Tree kdl_tree;
-  if (!kdl_parser::treeFromFile(urdf_path, kdl_tree)) {
-      printf("Failed to parse URDF file: %s\n", urdf_path.c_str());
-      produce_event(eventData, E_CONFIGURE_EXIT);
-      return;
-  }
-
-  KDL::Chain kdl_chain;
-  constexpr const char* BASE_LINK = "base_link";
-  constexpr const char* TCP_LINK = "EndEffector_Link";
-
-  if (!kdl_tree.getChain(BASE_LINK, TCP_LINK, kdl_chain)) {
-    printf("Failed to extract KDL chains from URDF\n");
+  ArmKDLModel model;
+  bool kdl_model_loaded =
+  model.loadFromURDF("grc26",
+                    "GEN3_URDF_V12.urdf",
+                    "base_link",
+                    "EndEffector_Link");
+                
+  if (!kdl_model_loaded) {
+    printf("Failed to parse URDF file");
     produce_event(eventData, E_CONFIGURE_EXIT);
     return;
   }
-  printf("Successfully parsed URDF and extracted KDL chains\n");
-  KDL::Vector gravity_vec(0, 0, -9.81);
-
-  int num_joints = kdl_chain.getNrOfJoints();
-  int num_segments = kdl_chain.getNrOfSegments();
-
-  // print link names and joint names
-  printf("Kinova arm has %d joints:\n", num_joints);
-  for (size_t i = 0; i < kdl_chain.getNrOfSegments(); ++i) {
-      const auto& segment = kdl_chain.getSegment(i);
-      printf("  Segment %zu: %s\n", i, segment.getName().c_str());
-      if (segment.getJoint().getType() != KDL::Joint::None) {
-          printf("    Joint: %s\n", segment.getJoint().getName().c_str());
-      }
-  }
+  KDL::Chain kdl_chain = model.chain();
+  int num_joints = model.num_joints();
   assert(num_joints == NUM_JOINTS && "Kinova arm has unexpected number of joints");
-  printf("Kinova arm chain has %d segments and %d joints\n", num_segments, num_joints);
 
   // establish communication with arm
   robif2b_kinova_gen3_configure(&rob);
@@ -132,18 +108,18 @@ void FSMInterface::configure(events *eventData, ArmState& arm_state){
   produce_event(eventData, E_CONFIGURED);
 }
 
-void FSMInterface::idle(events *eventData, const ArmState& arm_state){
+void FSMInterface::idle(events *eventData, const SystemState& system_state){
 
 }
 
-void FSMInterface::execute(events *eventData, ArmState& arm_state){
+void FSMInterface::execute(events *eventData, SystemState& system_state){
 
   // solve for control commands
 
   // update control commands
 }
 
-void FSMInterface::touch_table_behavior_config(events *eventData, ArmState& arm_state){
+void FSMInterface::touch_table_behavior_config(events *eventData, SystemState& system_state){
   sp.translation_mode = ControlMode::Velocity;
   sp.rotation_mode    = ControlMode::Position;
   sp.gripper_mode    = ControlMode::None;
@@ -155,7 +131,7 @@ void FSMInterface::touch_table_behavior_config(events *eventData, ArmState& arm_
   produce_event(eventData, E_M_SLIDE_ALONG_TABLE_CONFIGURED);
 }
 
-void FSMInterface::slide_on_table_behavior_config(events *eventData, ArmState& arm_state){
+void FSMInterface::slide_on_table_behavior_config(events *eventData, SystemState& system_state){
   sp.translation_mode = ControlMode::Velocity;
   sp.rotation_mode    = ControlMode::Position;
   sp.gripper_mode    = ControlMode::None;
@@ -167,7 +143,7 @@ void FSMInterface::slide_on_table_behavior_config(events *eventData, ArmState& a
   produce_event(eventData, E_M_TOUCH_TABLE_CONFIGURED);
 }
 
-void FSMInterface::grasp_object_behavior_config(events *eventData, ArmState& arm_state){
+void FSMInterface::grasp_object_behavior_config(events *eventData, SystemState& system_state){
   sp.translation_mode = ControlMode::Velocity;
   sp.rotation_mode    = ControlMode::Position;
   sp.gripper_mode    = ControlMode::Position;
@@ -180,7 +156,7 @@ void FSMInterface::grasp_object_behavior_config(events *eventData, ArmState& arm
   produce_event(eventData, E_M_GRASP_OBJECT_CONFIGURED);
 }
 
-void FSMInterface::collaborate_behavior_config(events *eventData, ArmState& arm_state){
+void FSMInterface::collaborate_behavior_config(events *eventData, SystemState& system_state){
   sp.translation_mode = ControlMode::Effort;
   sp.rotation_mode    = ControlMode::Effort;
   sp.gripper_mode    = ControlMode::Position;
@@ -193,7 +169,7 @@ void FSMInterface::collaborate_behavior_config(events *eventData, ArmState& arm_
   produce_event(eventData, E_M_COLLABORATE_CONFIGURED);
 }
 
-void FSMInterface::release_object_behavior_config(events *eventData, ArmState& arm_state){
+void FSMInterface::release_object_behavior_config(events *eventData, SystemState& system_state){
   sp.translation_mode = ControlMode::None;
   sp.rotation_mode    = ControlMode::None;
   sp.gripper_mode    = ControlMode::Position;
@@ -202,7 +178,7 @@ void FSMInterface::release_object_behavior_config(events *eventData, ArmState& a
   produce_event(eventData, E_M_RELEASE_OBJECT_CONFIGURED);
 }
 
-void FSMInterface::exit(events *eventData, ArmState& arm_state){
+void FSMInterface::exit(events *eventData, SystemState& system_state){
   // stop the arm and shutdown communication
   robif2b_kinova_gen3_stop(&rob);
   if (!rob.success) {
@@ -220,48 +196,48 @@ void FSMInterface::exit(events *eventData, ArmState& arm_state){
 }
 
 // decision of which behavior to execute based on events and arm state
-void FSMInterface::fsm_behavior(events *eventData, ArmState& arm_state){
+void FSMInterface::fsm_behavior(events *eventData, SystemState& system_state){
 
   if (consume_event(eventData, E_ENTER_IDLE)) {
-      idle(eventData, arm_state);
+      idle(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_CONFIGURE)) {
-      configure(eventData, arm_state);
+      configure(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_EXECUTE)) {
-      execute(eventData, arm_state);
+      execute(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_M_TOUCH_TABLE)) {
-      touch_table_behavior_config(eventData, arm_state);
+      touch_table_behavior_config(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_M_SLIDE_ALONG_TABLE)) {
-      slide_on_table_behavior_config(eventData, arm_state);
+      slide_on_table_behavior_config(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_M_GRASP_OBJECT)) {
-      grasp_object_behavior_config(eventData, arm_state);
+      grasp_object_behavior_config(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_M_COLLABORATE)) {
-      collaborate_behavior_config(eventData, arm_state);
+      collaborate_behavior_config(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_M_RELEASE_OBJECT)) {
-      release_object_behavior_config(eventData, arm_state);
+      release_object_behavior_config(eventData, system_state);
   }
   if (consume_event(eventData, E_ENTER_EXIT)) {
-      exit(eventData, arm_state);
+      exit(eventData, system_state);
   }
 }
 
-void FSMInterface::compute_gravity_comp(events *eventData, ArmState& arm_state){
+void FSMInterface::compute_gravity_comp(events *eventData, SystemState& system_state){
 
 }
 
-void FSMInterface::compute_cartesian_ctrl(events *eventData, ArmState& arm_state){
+void FSMInterface::compute_cartesian_ctrl(events *eventData, SystemState& system_state){
 
 }
 
 void FSMInterface::run_fsm(){
   produce_event(&eventData, E_STEP);
-  fsm_behavior(&eventData, arm_state);
+  fsm_behavior(&eventData, system_state);
   fsm_step_nbx(&fsm);
   reconfig_event_buffers(&eventData);
 };
