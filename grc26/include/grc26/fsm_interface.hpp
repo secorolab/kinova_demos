@@ -26,8 +26,6 @@
 #include "kdl/frames_io.hpp"
 #include "kdl/jntarray.hpp"
 #include "kdl/jacobian.hpp"
-#include "kdl/chainfksolverpos_recursive.hpp"
-#include "kdl/chainfksolvervel_recursive.hpp"
 #include "kdl/chainjnttojacdotsolver.hpp"
 #include "kdl/chainiksolvervel_pinv.hpp"
 #include "kdl/chainidsolver_recursive_newton_euler.hpp"
@@ -40,10 +38,11 @@
 #include "grc26/system_state.hpp"
 #include "grc26/arm_kdl_model.hpp"
 #include "grc26/task_status.hpp"
-#include "grc26/solver_state_interface.hpp"
 #include "grc26/achd_solver.hpp"
-#include "grc26/task_setpoint.hpp"
+#include "grc26/task_spec.hpp"
 #include "grc26/compute_controller_command.hpp"
+#include "grc26/arm_kinematics.hpp"
+#include "grc26/controller_config.hpp"
 
 #define NUM_JOINTS 7
 
@@ -73,6 +72,7 @@ public:
   void grasp_object_behavior_config(events *eventData, SystemState& system_state);
   void collaborate_behavior_config(events *eventData, SystemState& system_state);
   void release_object_behavior_config(events *eventData, SystemState& system_state);
+  void check_post_condition(events *eventData, const SystemState& system_state, const TaskSpec& task_spec);
   void exit(events *eventData, SystemState& system_state);
 
   // decision of which behavior to execute based on events and arm state
@@ -90,15 +90,15 @@ private:
   robif2b_kg3_robotiq_gripper_nbx& gripper;
   robif2b_robotiq_ft_nbx& ft_sensor;
   TaskStatusData& task_status;
-  TaskSetpoint task_setpoint;
+  TaskSpec task_spec;
+  ControllerConfig config;
+  ComputeControllerCommand compute_ctr_cmd_obj;
 
   bool in_comm_with_hw;
 
   std::unique_ptr<ArmKDLModel> model_;
   std::unique_ptr<VereshchaginSolver> solver_;
-  std::unique_ptr<SolverStateInterface> solver_state_interface_;
-  std::unique_ptr<KDL::ChainFkSolverPos_recursive> fkSolverPos;
-  std::unique_ptr<KDL::ChainFkSolverVel_recursive> fkSolverVel;
+  std::unique_ptr<ArmKinematics> arm_kinematics_;
 
 };
 

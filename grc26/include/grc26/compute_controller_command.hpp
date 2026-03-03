@@ -1,25 +1,31 @@
 #ifndef COMPUTE_CONTROLLER_COMMAND_HPP
 #define COMPUTE_CONTROLLER_COMMAND_HPP
 
-#include "grc26/task_setpoint.hpp"
-#include "grc26/pid_controller.hpp"
-#include "grc26/stiffness_controller.hpp"
+#include "grc26/controller_config.hpp"
+#include "grc26/arm_kinematics.hpp"
 #include "grc26/system_state.hpp"
+#include "grc26/task_spec.hpp"
+#include "grc26/achd_solver.hpp"
+#include "grc26/controller_config.hpp"
 
-constexpr int MAX_LINKS = ARM_DOF + 1;
-
-struct ControlOutput
+class ComputeControllerCommand
 {
-    double ee_acceleration[6];        // beta
-    double f_ext[MAX_LINKS][6];       // wrench injection
+public:
+    explicit ComputeControllerCommand(const Controllers& controllers);
+
+    void compute(
+        const SystemState& state,
+        const ArmKinematics& kin,
+        const TaskSpec& task,
+        KDL::JntArray& beta,
+        KDL::Wrenches& f_ext,
+        double dt = 0.001);
+
+    // setGains refreshes the local copy of controllers and its internal states
+    void setGains(const Controllers& controllers) { controllers_ = controllers; };
+
+private:
+    Controllers controllers_;  // local copy, fixed size
 };
 
-void compute_controller_command(
-    const SystemState&        state,
-    const TaskSetpoint&       sp,
-    ControlOutput&            out,
-    PID                       pid_lin[3],   // x, y, z linear PID controllers
-    const StiffnessController ori_ctrl[3],  // roll, pitch, yaw stiffness controllers
-    double                    dt = 0.001);
-
-#endif // COMPUTE_CONTROLLER_COMMAND_HPP  
+#endif // COMPUTE_CONTROLLER_COMMAND_HPP

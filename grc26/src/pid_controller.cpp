@@ -7,12 +7,14 @@ PID::PID(double p_gain,
          double error_sum_tol,
          double decay_rate,
          double dead_zone_limit,
-         double lp_filter_alpha)
+         double lp_filter_alpha,
+         double saturation_limit)
     : err_integ(0.0),
       err_last(0.0),
       kp(p_gain),
       ki(i_gain),
       kd(d_gain),
+      saturation_limit(saturation_limit),
       err_sum_tol(error_sum_tol),
       decay_rate(decay_rate),
       dead_zone_limit(dead_zone_limit),
@@ -27,7 +29,8 @@ void PID::set_params(double p_gain,
                     double error_sum_tol,
                     double decay_rate,
                     double dead_zone_limit,
-                    double lp_filter_alpha)
+                    double lp_filter_alpha,
+                    double saturation_limit)
 {
     err_integ             = 0.0;
     err_last              = 0.0;
@@ -38,19 +41,29 @@ void PID::set_params(double p_gain,
     this->decay_rate      = decay_rate;
     this->dead_zone_limit = dead_zone_limit;
     this->lp_filter_alpha = lp_filter_alpha;
+    this->saturation_limit = saturation_limit;
     d_signal_filter = LowPassFilter(lp_filter_alpha);
 }
 
 double PID::control(double error, double dt)
 {
-    if (dt <= 0.0) {dt = 1.0;}  // safety fallback
+    if (dt <= 0.0) {dt = 1e-6;}  // safety fallback
 
     if (std::abs(error) < dead_zone_limit)
     { error = 0.0; }
     
-    if (err_last == 0.0)
-    { err_last = error; } // avoid large derivative kick at startup
+    if (first_update)
+    {
+        err_last = error;
+        first_update = false;
+    } // handle first update case to prevent large derivative kick
     
+    if (stiffness_control_mode)
+    {
+        // in stiffness control mode, only proportional term is used to hold position
+        return kp * error;
+    }
+
     // computing derivative term
     double err_diff = (error - err_last) / dt;
     err_last = error;
@@ -70,5 +83,9 @@ double PID::control(double error, double dt)
         err_integ = -err_sum_tol;
     }
 
-    return kp * error + ki * err_integ + kd * filtered_d;
+    double out = kp * error + ki * err_integ + kd * filtered_d;
+
+    if (out > saturation_limit) out = saturation_limit;
+    if (out < -saturation_limit) out = -saturation_limit;
+    return out;
 }

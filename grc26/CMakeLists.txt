@@ -23,6 +23,7 @@ find_package(bdd_ros2_interfaces REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(orocos_kdl REQUIRED)
 find_package(coord2b REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 include_directories(
   include
@@ -50,7 +51,9 @@ ament_export_dependencies(rosidl_default_runtime)
 add_executable(kinova_single_arm_demo 
                 src/achd_solver.cpp
                 src/arm_kdl_model.cpp
+                src/arm_kinematics.cpp
                 src/compute_controller_command.cpp
+                src/controller_config.cpp
                 src/filters.cpp
                 src/fsm_interface.cpp
                 src/kinova_single_arm_demo.cpp
@@ -78,6 +81,7 @@ target_link_libraries(kinova_single_arm_demo
   robif2b::kinova_gen3
   robif2b::robotiq_ft_sensor
   coord2b
+  yaml-cpp
   ${orocos_kdl_LIBRARIES}
   )
 
@@ -95,6 +99,11 @@ install(TARGETS kinova_single_arm_demo
 install(
   DIRECTORY urdf/
   DESTINATION share/${PROJECT_NAME}/urdf
+)
+
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
 )
 
 install(TARGETS kinova_single_arm_demo

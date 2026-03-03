@@ -10,6 +10,7 @@
 #include <kdl/frames.hpp>
 
 #include "grc26/arm_kdl_model.hpp"
+#include "grc26/system_state.hpp"
 
 
 class VereshchaginSolver
@@ -21,13 +22,25 @@ public:
 
   void setAlpha(const KDL::Jacobian& alpha);
 
+  void setState(const SystemState& state);
+
+  void updateTorqueCmdInState(SystemState& state) const;
+
+  KDL::Wrenches& externalWrenches() noexcept { return f_ext_; }
+  const KDL::Wrenches& externalWrenches() const noexcept { return f_ext_; }
+  /*
+  Usage:
+  auto& f_ext_rt = solver.externalWrenches();
+  f_ext_rt.back() = measured_wrench; // apply wrench at end-effector segment
+  OR
+  f_ext_rt[segment_index] = wrench; // apply wrench at specified segment
+  */
+
   KDL::JntArray& beta() { return beta_; }
   const KDL::JntArray& beta() const { return beta_; }
 
   int computeTorques();
 
-  KDL::JntArray& q()       { return q_; }
-  KDL::JntArray& qd()      { return qd_; }
   const KDL::JntArray& qdd() const { return qdd_; }
   const KDL::JntArray& tauCmd() const { return tau_cmd_; }
 

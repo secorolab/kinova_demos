@@ -13,6 +13,23 @@ void VereshchaginSolver::setAlpha(const KDL::Jacobian& alpha)
     alpha_ = alpha;
 }
 
+void VereshchaginSolver::setState(const SystemState& state)
+{
+  for (unsigned int i = 0; i < dof_; ++i)
+  {
+    q_(i)  = state.arm.q[i];
+    qd_(i) = state.arm.qd[i];
+  }
+}
+
+void VereshchaginSolver::updateTorqueCmdInState(SystemState& state) const
+{
+  for (unsigned int i = 0; i < tau_cmd_.rows(); ++i)
+  {
+    state.arm.tau_cmd[i] = tau_cmd_(i);
+  }
+}
+
 bool VereshchaginSolver::initialize(unsigned int num_constraints)
 {
   num_constraints_ = num_constraints;
@@ -55,6 +72,13 @@ bool VereshchaginSolver::initialize(unsigned int num_constraints)
   for (size_t i = 0; i < f_ext_.size(); ++i) {
     f_ext_[i] = KDL::Wrench::Zero();
   }
+
+  alpha_.setColumn(0, KDL::Twist(KDL::Vector(1, 0, 0), KDL::Vector(0, 0, 0)));
+  alpha_.setColumn(1, KDL::Twist(KDL::Vector(0, 1, 0), KDL::Vector(0, 0, 0))); 
+  alpha_.setColumn(2, KDL::Twist(KDL::Vector(0, 0, 1), KDL::Vector(0, 0, 0))); 
+  alpha_.setColumn(3, KDL::Twist(KDL::Vector(0, 0, 0), KDL::Vector(1, 0, 0))); 
+  alpha_.setColumn(4, KDL::Twist(KDL::Vector(0, 0, 0), KDL::Vector(0, 1, 0))); 
+  alpha_.setColumn(5, KDL::Twist(KDL::Vector(0, 0, 0), KDL::Vector(0, 0, 1))); 
 
   initialized_ = true;
   return true;

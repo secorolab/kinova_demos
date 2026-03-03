@@ -11,7 +11,8 @@ class PID {
         double error_sum_tol = 0.7,
         double decay_rate    = 0.007,
         double dead_zone_limit = 0.005,
-        double lp_filter_alpha = 0.01);
+        double lp_filter_alpha = 0.01,
+        double saturation_limit = 1.0);
 
     void set_params(
         double p_gain,
@@ -20,8 +21,14 @@ class PID {
         double error_sum_tol = 0.7,
         double decay_rate    = 0.007,
         double dead_zone_limit = 0.005,
-        double lp_filter_alpha = 0.01
+        double lp_filter_alpha = 0.01,
+        double saturation_limit = 1.0
     );
+
+    void set_p_gain(double p_gain) { kp = p_gain; }
+    void set_i_gain(double i_gain) { ki = i_gain; }
+    void set_d_gain(double d_gain) { kd = d_gain; }
+    void set_stiffness_control_mode(bool mode) { stiffness_control_mode = mode; }
 
     double control(double error, double dt = 1.0);
 
@@ -35,6 +42,9 @@ class PID {
     double decay_rate;
     double dead_zone_limit;
     double lp_filter_alpha;
+    double saturation_limit;
+    bool first_update = true;
+    bool stiffness_control_mode = false;
     LowPassFilter d_signal_filter;
 };
 

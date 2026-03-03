@@ -30,7 +30,6 @@ void signal_handler(int /*signum*/) {
 }
 
 
-
 int main(int argc, char ** argv)
 {
   // --------------------- Signal handling ---------------------
@@ -95,9 +94,9 @@ int main(int argc, char ** argv)
   auto now = std::chrono::high_resolution_clock::now();
   auto deadline = now + desired_loop_rate;
 
-  while (n < 30000 && !shutting_down.load()){
+  while (n < 300 && !shutting_down.load()){
     fsm_interface->run_fsm();
-    printf("hello world grc26 package\n");
+    printf("hello world grc26 package %d\n", n);
     task_status->update(status);
     n++;
 
