@@ -19,7 +19,6 @@
 - no compliance behaviour
 - uses moveit for motion planning
 
-
 ## Setup
 
 ### clone the repo
@@ -37,6 +36,7 @@ git clone --depth=1 https://github.com/secorolab/grc26_kinova_demo.git
 ```shell
 vcs import src < src/grc26_kinova_demo/grc26.repos
 ```
+
 ### setup flags
 
 copy the [colcon.meta](colcon.meta) to the ros2 workspace folder.
@@ -55,3 +55,25 @@ cd ~/grc26
 colcon build
 ```
 
+## Isaac Sim Setup for ROS2 bridge
+
+You need to enable Isaac Sim's internal ROS2 libraries in the terminal before launching Isaac Sim:
+
+```sh
+export isaac_sim_package_path=$ISAAC_SIM_DIR # where your Isaac Sim install is located
+
+export ROS_DISTRO=jazzy
+
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+# Can only be set once per terminal.
+# Setting this command multiple times will append the internal library path again potentially leading to conflicts
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$isaac_sim_package_path/exts/isaacsim.ros2.bridge/jazzy/lib
+```
+
+> [!IMPORTANT]
+> Do not source the system ROS2 before running Isaac Sim as this will most likely cause a Python version mismatch. Isaac Sim uses its built-in Python 3.11!
+
+`launch_sim.py` then needs to be ran in the same terminal using the bundled `python.sh`.
+
+To control the simulation itself, see [Isaac Sim ROS2 Simulation Control](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_simulation_control.html#using-the-ros-2-simulation-control-services).

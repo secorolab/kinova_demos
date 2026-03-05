@@ -7,12 +7,11 @@ from isaacsim.core.utils.extensions import enable_extension
 
 # Enable ROS2 bridge extension
 enable_extension("isaacsim.ros2.bridge")
+enable_extension("isaacsim.ros2.sim_control")
 simulation_app.update()
 
-# Get your package's USD path via ament
-import ament_index_python.packages as ament
-package_share = ament.get_package_share_directory('isaacsim_grc26')
-usd_path = f"{package_share}/assets/grc26_demo.usd"
+# Get the USD path
+usd_path = "../assets/grc26_demo.usd"
 print(f"Loading USD from: {usd_path}")
 
 # Open the stage directly — preserves OmniGraphs, physics, TF publishers
