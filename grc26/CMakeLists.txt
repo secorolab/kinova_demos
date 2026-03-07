@@ -91,6 +91,35 @@ rosidl_get_typesupport_target(cpp_typesupport_target
                               "rosidl_typesupport_cpp")
 target_link_libraries(kinova_single_arm_demo "${cpp_typesupport_target}")
 
+# get all *.cpp files in the test directory
+file(GLOB TEST_SOURCES "test/*.cpp")
+# add an executable for each test file
+foreach(TEST_SOURCE ${TEST_SOURCES})
+  get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+  add_executable(${TEST_NAME} ${TEST_SOURCE})
+  target_include_directories(${TEST_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+  target_compile_features(${TEST_NAME} PUBLIC c_std_99 cxx_std_23)
+  ament_target_dependencies(${TEST_NAME}
+    rclcpp
+    rclcpp_action
+    ament_index_cpp
+    std_msgs
+    sensor_msgs
+    geometry_msgs
+    bdd_ros2_interfaces
+    kdl_parser
+    )
+  target_link_libraries(${TEST_NAME}
+    robif2b::kinova_gen3
+    robif2b::robotiq_ft_sensor
+    coord2b
+    yaml-cpp
+    ${orocos_kdl_LIBRARIES}
+    "${cpp_typesupport_target}")
+endforeach()
+
 install(TARGETS kinova_single_arm_demo
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
