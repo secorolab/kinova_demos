@@ -62,12 +62,53 @@ struct SystemState
   struct FTData
   {
     float fx, fy, fz, tx, ty, tz = 0.0;
-    float wrench[6];
+    float fx_BL, fy_BL, fz_BL, tx_BL, ty_BL, tz_BL = 0.0;
+    float wrench[6] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    float wrench_BL[6] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     bool new_data = false;
     bool success = false;
     enum robif2b_robotiq_ft_state ft_state;
     bool present = true;
   } ft_sensor;
+};
+
+
+struct FTSnapshot
+{
+  float fx = 0.0f;
+  float fy = 0.0f;
+  float fz = 0.0f;
+  float tx = 0.0f;
+  float ty = 0.0f;
+  float tz = 0.0f;
+
+  float wrench[6]{};
+
+  bool new_data = false;
+  bool success = false;
+
+  robif2b_robotiq_ft_state ft_state = ROBIF2B_ROBOTIQ_FT_STATE_INIT;
+
+  std::chrono::steady_clock::time_point sample_time = std::chrono::steady_clock::now();
+
+  std::uint64_t sequence = 0;
+};
+
+struct FTIOBuffer
+{
+  float fx = 0.0f;
+  float fy = 0.0f;
+  float fz = 0.0f;
+  float tx = 0.0f;
+  float ty = 0.0f;
+  float tz = 0.0f;
+
+  float wrench[6]{};
+
+  bool new_data = false;
+  bool success = false;
+
+  robif2b_robotiq_ft_state ft_state = ROBIF2B_ROBOTIQ_FT_STATE_INIT;
 };
 
 #endif // SYSTEM_STATE_HPP

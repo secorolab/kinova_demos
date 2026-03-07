@@ -2,9 +2,8 @@
 #define ACHD_SOLVER_HPP
 
 #include <memory>
-#include <kdl/chainfksolvervel_recursive.hpp>
 #include "kdl/chainhdsolver_vereshchagin_fixed_joint.hpp"
-#include "kdl/chainhdsolver_vereshchagin_fext.hpp"
+#include "kdl/chainhdsolver_vereshchagin_fext_fixed_joint.hpp"
 #include <kdl/jntarray.hpp>
 #include <kdl/jacobian.hpp>
 #include <kdl/frames.hpp>
@@ -28,6 +27,9 @@ public:
 
   KDL::Wrenches& externalWrenches() noexcept { return f_ext_; }
   const KDL::Wrenches& externalWrenches() const noexcept { return f_ext_; }
+
+  KDL::Wrenches& externalWrenches_fext_solver() noexcept { return f_ext_fext_; }
+  const KDL::Wrenches& externalWrenches_fext_solver() const noexcept { return f_ext_fext_; }
   /*
   Usage:
   auto& f_ext_rt = solver.externalWrenches();
@@ -40,15 +42,19 @@ public:
   const KDL::JntArray& beta() const { return beta_; }
 
   int computeTorques();
+  int computeTorquesFext();
 
   const KDL::JntArray& qdd() const { return qdd_; }
   const KDL::JntArray& tauCmd() const { return tau_cmd_; }
+  const KDL::JntArray& tauCmdFext() const { return tau_cmd_fext_; }
+  void resetTorqueOutputs();
+
 
 private:
   const ArmKDLModel& model_;
 
-  std::unique_ptr<KDL::ChainHdSolver_Vereshchagin_Fixed_Joint> solver_;
-  std::unique_ptr<KDL::ChainFkSolverVel_recursive> fk_vel_solver_;
+  std::unique_ptr<KDL::ChainHdSolver_Vereshchagin_Fixed_Joint> solver_fixed_jnt_;
+  std::unique_ptr<KDL::ChainHdSolver_Vereshchagin_Fext_FixedJoint> solver_fext_;
 
   unsigned int dof_{0};
   unsigned int num_segments_{0};
@@ -58,13 +64,19 @@ private:
   KDL::JntArray q_;
   KDL::JntArray qd_;
   KDL::JntArray qdd_;
+  KDL::JntArray qdd_fext_;
 
   KDL::JntArray tau_cmd_;
+  KDL::JntArray tau_cmd_fext_;
   KDL::JntArray ff_taus_;
+  KDL::JntArray ff_taus_fext_;
   KDL::JntArray beta_;
+  KDL::JntArray beta_fext_;
 
   KDL::Jacobian alpha_;
+  KDL::Jacobian alpha_fext_;
   KDL::Wrenches f_ext_;
+  KDL::Wrenches f_ext_fext_;
 
   bool initialized_{false};
 };

@@ -199,7 +199,7 @@
     <inertial>
       <origin xyz="-0.000281 -0.011402 -0.029798" rpy="0 0 0" />
       <mass value="0.5006" />
-      <inertia ixx="0.000587" ixy="3E-06" ixz="3E-06" iyy="0.000369" iyz="0.000118" izz="0.000609" />
+      <inertia ixx="0.000587" ixy="3E-06" ixz="3E-06" iyy="0.000369" iyz="0.000118" izz="0.100609" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
@@ -224,11 +224,23 @@
     <axis xyz="0 0 1" />
     <limit effort="9" velocity="0.8727" />
   </joint>
-  <link name="EndEffector_Link" />
+  <link name="EndEffector_Link">
+    <inertial>
+      <origin xyz="0 0 0.025" rpy="0 0 0"/>
+      <mass value="0.595"/>
+      <inertia ixx="0.000814" ixy="0" ixz="0" iyy="0.000814" iyz="0" izz="0.00144"/>
+    </inertial>
+  </link>
   <joint name="EndEffector" type="fixed">
     <origin xyz="0 0 -0.0615250000000001" rpy="3.14159265358979 1.09937075168372E-32 0" />
     <parent link="Bracelet_Link" />
     <child link="EndEffector_Link" />
     <axis xyz="0 0 0" />
+  </joint>
+  <link name="FTSensor_Link"/>
+  <joint name="FTSensor" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 3.14159265359"/>
+    <parent link="EndEffector_Link"/>
+    <child link="FTSensor_Link"/>
   </joint>
 </robot>

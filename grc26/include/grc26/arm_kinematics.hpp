@@ -20,6 +20,7 @@ public:
   void update(const SystemState& state) noexcept;
 
   const KDL::Frame& pose() const noexcept { return pose_; }
+  const KDL::Frame& forearmPoseBL() const noexcept { return forearm_pose_BL_; }
   const KDL::Twist& twist() const noexcept { return twist_; }
   const double* rpy() const noexcept { return rpy_; }
 
@@ -35,6 +36,7 @@ private:
   KDL::FrameVel frame_vel_;
 
   KDL::Frame pose_;
+  KDL::Frame forearm_pose_BL_;
   KDL::Twist twist_;
   double rpy_[3];
 };

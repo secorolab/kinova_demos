@@ -56,6 +56,7 @@ add_executable(kinova_single_arm_demo
                 src/controller_config.cpp
                 src/filters.cpp
                 src/fsm_interface.cpp
+                src/fsm_utils.cpp
                 src/kinova_single_arm_demo.cpp
                 src/pid_controller.cpp
                 src/task_status_node.cpp

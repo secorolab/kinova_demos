@@ -21,7 +21,7 @@ from rclpy.time import Time
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState
 
-from openarm_compl_ctrl.msg import PIDDebug, CartesianPIDDebug
+from grc26.msg import PIDDebug, CartesianPIDDebug
 
 
 class ROSSpinThread(QtCore.QThread):

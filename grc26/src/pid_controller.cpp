@@ -60,7 +60,6 @@ double PID::control(double error, double dt)
     
     if (stiffness_control_mode)
     {
-        // in stiffness control mode, only proportional term is used to hold position
         return kp * error;
     }
 
@@ -82,8 +81,14 @@ double PID::control(double error, double dt)
     } else if (err_integ < -err_sum_tol) {
         err_integ = -err_sum_tol;
     }
-
+    
     double out = kp * error + ki * err_integ + kd * filtered_d;
+    // if (kp > 0.0)
+    // {
+    //     printf("PID gains: P: %f, I: %f, D: %f\n", kp, ki, kd);
+    //     printf("PID terms: P: %f, I: %f, D: %f\n", kp * error, ki * err_integ, kd * filtered_d);
+    //     printf("Output is: %f\n", out);
+    // }
 
     if (out > saturation_limit) out = saturation_limit;
     if (out < -saturation_limit) out = -saturation_limit;

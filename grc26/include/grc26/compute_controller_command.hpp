@@ -1,6 +1,7 @@
 #ifndef COMPUTE_CONTROLLER_COMMAND_HPP
 #define COMPUTE_CONTROLLER_COMMAND_HPP
 
+
 #include "grc26/controller_config.hpp"
 #include "grc26/arm_kinematics.hpp"
 #include "grc26/system_state.hpp"

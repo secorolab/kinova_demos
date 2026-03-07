@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 constexpr int MAX_CONSTRAINTS = 10;
+constexpr int NUM_JOINTS = 7;
 
 enum class LinearMode : uint8_t
 {
@@ -17,6 +18,7 @@ enum class OrientationMode : uint8_t
 {
     None = 0,
     Position,
+    Velocity,
     Torque
 };
 
@@ -70,15 +72,23 @@ struct EELinearCommand
     double vel_threshold = 0.02;  // used for Position mode
 };
 
+
 struct OrientationCommand
 {
     bool enabled     = false;
     OrientationMode mode;     // roll pitch yaw
-
+    
     double rpy[3]    = {0};   // used if Position
     double torque[3] = {0};   // used if Torque
-
+    double ang_vel[3] = {0};   // used if Velocity
+    
     int segment_index;
+};
+
+struct JointPositionCommand
+{
+    bool enabled = false;
+    double position[NUM_JOINTS] = {0};
 };
 
 struct LinkLinearForceCommand
@@ -94,13 +104,24 @@ struct GripperCommand
     float position;
 };
 
+struct CollaborateSpec
+{
+    bool enabled = false;
+    double magnification_factor     = 1.0; // how much to amplify human forces for collaboration
+    double external_force_deadband  = 7.0; // forces below this threshold are considered noise and ignored
+    double f_ext_saturation_limit = 20.0; // maximum external force to consider for collaboration
+};
+
 struct TaskSpec
 {
     EELinearCommand        ee_linear;
     OrientationCommand     orientation;
+    CollaborateSpec        collaborate_spec;
+    JointPositionCommand   joint_position;
     LinkLinearForceCommand link_force;
     GripperCommand         gripper;
     PostCondition          post_condition;
+    bool forearm_yaw_control_enabled = false; // if true, will control forearm yaw to be constant throughout the task
     std::string controller_config_path = "controller_gains.yaml";
 
     void resetDefault()

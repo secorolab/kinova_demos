@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
 #include <filesystem>
 #include <atomic>
 
@@ -65,7 +66,7 @@ public:
 
   // FSM methods
   void configure(events *eventData, SystemState& system_state);
-  void idle(events *eventData, const SystemState& system_state);
+  void idle(events *eventData, SystemState& system_state);
   void execute(events *eventData, SystemState& system_state);
 
   void touch_table_behavior_config(events *eventData, SystemState& system_state);
@@ -79,7 +80,12 @@ public:
   // decision of which behavior to execute based on events and arm state
   void fsm_behavior(events *eventData, SystemState& system_state);
 
-  void compute_gravity_comp(events *eventData, SystemState& system_state);
+  void normalize_angle_diff(double& angle_diff);
+  void transform_ft_readings_to_BL_update_state(SystemState& system_state,
+                                               ArmKinematics& arm_kinematics);
+  void reset_ft_force_estimator();
+  bool update_ft_force_estimate(const SystemState& system_state,
+                                std::array<double, 6>& corrected_force_mean);
   void run_fsm();
 
 public:
@@ -92,8 +98,15 @@ private:
   robif2b_robotiq_ft_nbx& ft_sensor;
   TaskStatusData& task_status;
   TaskSpec task_spec;
-  ControllerConfig config;
+  ControllerConfig ctr_config_idle;
+  ControllerConfig ctr_config_touch_table;
+  ControllerConfig ctr_config_slide_on_table;
+  ControllerConfig ctr_config_grasp_object;
+  ControllerConfig ctr_config_collaborate;
+  ControllerConfig ctr_config_release_object;
   ComputeControllerCommand compute_ctr_cmd_obj;
+  bool task_triggered = false;
+  bool to_log = false;
 
   bool in_comm_with_hw;
   e_states fsm_execution_state;
@@ -101,6 +114,17 @@ private:
   std::unique_ptr<ArmKDLModel> model_;
   std::unique_ptr<VereshchaginSolver> solver_;
   std::unique_ptr<ArmKinematics> arm_kinematics_;
+
+  static constexpr std::size_t FT_WINDOW_SIZE = 500;
+  bool ft_reference_ready_ = false;
+  std::size_t ft_reference_count_ = 0;
+  std::array<double, 6> ft_reference_sum_{};
+  std::array<double, 6> ft_reference_mean_{};
+
+  std::array<std::array<double, 6>, FT_WINDOW_SIZE> ft_window_samples_{};
+  std::array<double, 6> ft_window_sum_{};
+  std::size_t ft_window_count_ = 0;
+  std::size_t ft_window_index_ = 0;
 
 };
 

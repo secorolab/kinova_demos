@@ -23,6 +23,7 @@ void ArmKinematics::update(const SystemState& state) noexcept
   q_vel_ = KDL::JntArrayVel(q_kdl_, qd_kdl_);
 
   fk_solver_.JntToCart(q_kdl_, pose_);
+  fk_solver_.JntToCart(q_kdl_, forearm_pose_BL_, 3);
   vel_solver_.JntToCart(q_vel_, frame_vel_);
 
   twist_ = frame_vel_.GetTwist();
