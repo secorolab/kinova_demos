@@ -8,7 +8,7 @@ import time
 import rclpy
 from rclpy.utilities import ok as rclpy_ok
 from rclpy.node import Node
-from rclpy.action.server import ActionServer, CancelResponse
+from rclpy.action.server import ActionServer, CancelResponse, GoalResponse, ServerGoalHandle
 from rclpy.action.client import ActionClient, ClientGoalHandle
 from rclpy.executors import MultiThreadedExecutor
 import rclpy.time
@@ -65,6 +65,8 @@ HOLDER_B     = 'holderB'
 OBJECT_LINK  = 'cutting_board_A'
 GRASP_LINK_1 = 'grasp_point_1'
 GRASP_LINK_2 = 'grasp_point_2'
+
+IS_HELD_DIST_THRESH = 0.05
 
 GRIPPER_OPEN_POS  = 0.0
 GRIPPER_CLOSE_POS = 0.8
@@ -140,8 +142,10 @@ class UserData(BaseModel):
     arm1_end_pose: Pose                   = None
     arm2_end_pose: Pose                   = None
 
-    max_vel_sf: float                     = 0.0
-    max_acc_sf: float                     = 0.0
+    arm1_max_vel_sf: float                = 0.0
+    arm1_max_acc_sf: float                = 0.0
+    arm2_max_vel_sf: float                = 0.0
+    arm2_max_acc_sf: float                = 0.0
 
     arm_action_type: ArmActionClientType  = ArmActionClientType.CARTESIAN
 
@@ -222,7 +226,8 @@ class DualArmPickPlace(Node):
             self,
             Behaviour,
             self.bhv_server_name,
-            self.bhv_execute_cb,
+            goal_callback=self.bhv_goal_cb,
+            execute_callback=self.bhv_execute_cb,
             cancel_callback=self.bhv_cancel_cb
         )
 
@@ -233,6 +238,9 @@ class DualArmPickPlace(Node):
         self.located_pick_pub = self.create_publisher(TrinaryStamped, TOPIC_LOCATED_PICK, 10)
         self.is_held_pub = self.create_publisher(TrinaryStamped, TOPIC_IS_HELD, 10)
         self.located_place_pub = self.create_publisher(TrinaryStamped, TOPIC_LOCATED_PLACE, 10)
+
+        self.is_held_timer = self.create_timer(0.1, self.is_held_monitor)
+        self.is_held_timer.cancel()
 
         self.bhv_ctx_id    = None
         self.bhv_goal_in   = False
@@ -308,15 +316,29 @@ class DualArmPickPlace(Node):
         af.get_result_future = None
         af.goal_handle = None
 
-    def bhv_cancel_cb(self, goal_handle: ClientGoalHandle) -> CancelResponse:
+    def bhv_goal_cb(self, goal_request):
+        if self.bhv_goal_in:
+            self.logger.warning('A behavior goal is already in progress, rejecting new goal')
+            return GoalResponse.REJECT
+
+        self.logger.info('Behavior execution goal accepted')
+        self.bhv_goal_in = True
+        return GoalResponse.ACCEPT
+
+    def bhv_cancel_cb(self, goal_handle: ServerGoalHandle) -> CancelResponse:
         self.logger.info('Behavior execution canceled')
         return CancelResponse.ACCEPT
 
-    def bhv_execute_cb(self, goal_handle: ClientGoalHandle):
+    def bhv_execute_cb(self, goal_handle: ServerGoalHandle):
         self.logger.info('Behavior execution started')
 
         self.bhv_ctx_id = goal_handle.request.scenario_context_id
         self.bhv_goal_done = False
+
+        goal_params = goal_handle.request.parameters
+
+        for paramVal in goal_params:
+            self.logger.info(f'Behavior parameter: {paramVal.param_rel_uri} = {paramVal.paral_val_uris}')
 
         response = Behaviour.Result()
         response.result.scenario_context_id = self.bhv_ctx_id
@@ -324,11 +346,10 @@ class DualArmPickPlace(Node):
         feedback = Behaviour.Feedback()
         feedback.scenario_context_id = self.bhv_ctx_id
 
-        self.bhv_goal_in = True
         self.bhv_wait_for_sim_reset = True
 
         rate = self.create_rate(100)
-        while rclpy.ok() and not self.bhv_goal_done:
+        while rclpy_ok() and not self.bhv_goal_done:
             
             if goal_handle.is_cancel_requested:
                 self.logger.info('Behavior execution cancel requested')
@@ -478,6 +499,38 @@ class DualArmPickPlace(Node):
             return False
 
         return True
+
+    def pose_norm(self, pose: Pose) -> float:
+        return (pose.position.x ** 2 + pose.position.y ** 2 + pose.position.z ** 2) ** 0.5
+
+    def is_held_monitor(self):
+        arm1_ee_gl_pose = self._lookup_pose(self.robot.arm1.ee_link, GRASP_LINK_1)
+        arm2_ee_gl_pose = self._lookup_pose(self.robot.arm2.ee_link, GRASP_LINK_2)
+
+        arm1_gl_norm = self.pose_norm(arm1_ee_gl_pose.pose)
+        arm2_gl_norm = self.pose_norm(arm2_ee_gl_pose.pose)
+
+        is_held = arm1_gl_norm < IS_HELD_DIST_THRESH and \
+                    arm2_gl_norm < IS_HELD_DIST_THRESH
+        
+        trinary_msg = TrinaryStamped()
+        trinary_msg.stamp = self.get_clock().now().to_msg()
+        trinary_msg.scenario_context_id = self.bhv_ctx_id
+        trinary_msg.trinary.value = Trinary.TRUE if is_held else Trinary.FALSE
+        self.is_held_pub.publish(trinary_msg)
+
+    def is_placed(self):
+        obj_pose = self._lookup_pose(OBJECT_LINK, HOLDER_B)
+
+        if obj_pose is None:
+            self.logger.error('Failed to lookup object or place pose for is_placed check')
+            return False
+        
+        obj_norm = self.pose_norm(obj_pose.pose)
+
+        return obj_norm < IS_HELD_DIST_THRESH
+
+        
     
 def configure_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     node.configure()
@@ -522,8 +575,11 @@ def idle_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
 def m_home_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     ud.arm_action_type = ArmActionClientType.NAMED
     
-    ud.max_vel_sf = 0.8
-    ud.max_acc_sf = 0.8
+    ud.arm1_max_vel_sf = 1.0
+    ud.arm1_max_acc_sf = 1.0
+
+    ud.arm2_max_vel_sf = 1.0
+    ud.arm2_max_acc_sf = 1.0
 
     ud.move_arm1 = True
     ud.move_arm2 = True
@@ -543,6 +599,21 @@ def m_open_gripper_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     return True
 
 def m_touch_table_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
+
+    # pub bhv
+    trinary_msg = TrinaryStamped()
+    trinary_msg.stamp = node.get_clock().now().to_msg()
+    trinary_msg.scenario_context_id = node.bhv_ctx_id
+    trinary_msg.trinary.value = Trinary.TRUE
+    node.located_pick_pub.publish(trinary_msg)
+
+    node.logger.info('published located pick message')
+
+    ud.arm1_max_vel_sf = 1.0
+    ud.arm1_max_acc_sf = 1.0
+
+    ud.arm2_max_vel_sf = 1.0
+    ud.arm2_max_acc_sf = 1.0
 
     g11_world_pose = node._lookup_pose(GRASP_LINK_1)
     g12_world_pose = node._lookup_pose(GRASP_LINK_2)
@@ -606,16 +677,7 @@ def m_touch_table_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     
     node.arm1_ac = node.arm1_cart_ac
     node.arm2_ac = node.arm2_cart_ac
-
-    # pub bhv
-    trinary_msg = TrinaryStamped()
-    trinary_msg.stamp = node.get_clock().now().to_msg()
-    trinary_msg.scenario_context_id = node.bhv_ctx_id
-    trinary_msg.trinary.value = Trinary.TRUE
-    node.located_pick_pub.publish(trinary_msg)
-
-    node.logger.info('published located pick message')
-
+    
     evt_msg = Event()
     evt_msg.stamp = node.get_clock().now().to_msg()
     evt_msg.scenario_context_id = node.bhv_ctx_id
@@ -626,6 +688,12 @@ def m_touch_table_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     return True
 
 def m_slide_along_table_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
+    ud.arm1_max_vel_sf = 1.0
+    ud.arm1_max_acc_sf = 1.0
+
+    ud.arm2_max_vel_sf = 1.0
+    ud.arm2_max_acc_sf = 1.0
+
     k1_target_pose = node._lookup_pose(GRASP_LINK_1)
     k2_target_pose = node._lookup_pose(GRASP_LINK_2)
 
@@ -667,11 +735,15 @@ def m_grasp_object_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     node.evt_pub.publish(evt_msg)
     node.logger.info('published pick end event')
 
-
     return True
 
 def m_collaborate_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
-    
+    ud.arm1_max_vel_sf = 0.2
+    ud.arm1_max_acc_sf = 0.2
+
+    ud.arm2_max_vel_sf = 1.0
+    ud.arm2_max_acc_sf = 1.0
+
     k1_target_pose = ud.arm1_end_pose
     k2_target_pose = ud.arm2_end_pose
 
@@ -687,22 +759,13 @@ def m_collaborate_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     ud.arm1_target_pose = arm1_waypoints
     ud.arm2_target_pose = arm2_waypoints
 
-    ud.max_vel_sf = 1.0
-    ud.max_acc_sf = 1.0
-
     ud.move_arm1 = True
     ud.move_arm2 = True
     ud.move_gripper1 = False
     ud.move_gripper2 = False
 
-    # pub bhv
-    trinary_msg = TrinaryStamped()
-    trinary_msg.stamp = node.get_clock().now().to_msg()
-    trinary_msg.scenario_context_id = node.bhv_ctx_id
-    trinary_msg.trinary.value = Trinary.TRUE
-    node.is_held_pub.publish(trinary_msg)
-
-    node.logger.info('published is held message')
+    # spwan is-held monitor
+    node.is_held_timer.reset()
 
     evt_msg = Event()
     evt_msg.stamp = node.get_clock().now().to_msg()
@@ -725,6 +788,14 @@ def m_release_object_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     return True
 
 def m_retract_arm_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
+    node.is_held_timer.cancel()
+
+    ud.arm1_max_vel_sf = 1.0
+    ud.arm1_max_acc_sf = 1.0
+
+    ud.arm2_max_vel_sf = 1.0
+    ud.arm2_max_acc_sf = 1.0
+
     a1_current_pose = node._lookup_pose(node.robot.arm1.ee_link)
     a2_current_pose = node._lookup_pose(node.robot.arm2.ee_link)
 
@@ -751,11 +822,11 @@ def execute_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     if ud.move_arm1 and not ud.arm1_done:
         ud.arm1_done = node.move_arm(node.arm1_ac, ud.arm1_af, 
                                      ud.arm1_target_pose, ud.arm_action_type,
-                                     ud.max_vel_sf, ud.max_acc_sf)
+                                     ud.arm1_max_vel_sf, ud.arm1_max_acc_sf)
     if ud.move_arm2 and not ud.arm2_done:
         ud.arm2_done = node.move_arm(node.arm2_ac, ud.arm2_af, 
                                      ud.arm2_target_pose, ud.arm_action_type,
-                                     ud.max_vel_sf, ud.max_acc_sf)
+                                     ud.arm2_max_vel_sf, ud.arm2_max_acc_sf)
     if ud.move_gripper1 and not ud.g1_done:
         ud.g1_done = node.gripper_control(node.g1_ac, ud.g1_af, ud.arm1_gripper_open, node.robot.arm1.gripper_joint)
     if ud.move_gripper2 and not ud.g2_done:
@@ -807,6 +878,15 @@ def execute_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
             produce_event(fsm.event_data, EventID.E_M_RELEASE_OBJECT_CONFIG)
         case Motions.RELEASE:
             ud.current_motion = Motions.RETRACT
+            
+            evt_msg = Event()
+            evt_msg.stamp = node.get_clock().now().to_msg()
+            evt_msg.scenario_context_id = node.bhv_ctx_id
+            evt_msg.uri = EXPORTED_EVENTS['PLACE_END']
+            node.evt_pub.publish(evt_msg)
+            node.logger.info('published place end event')
+            node.bhv_goal_in = False
+
             print(f"Motion '{Motions.RELEASE.name}' completed, transitioning to '{Motions.RETRACT.name}'")
             produce_event(fsm.event_data, EventID.E_M_RETRACT_ARM_CONFIG)
         case Motions.RETRACT:
@@ -818,22 +898,16 @@ def execute_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
             print(f"Motion '{Motions.RETURN_HOME.name}' completed, all motions done")
             
             # pub bhv
+            is_placed = node.is_placed()
+
             trinary_msg = TrinaryStamped()
             trinary_msg.stamp = node.get_clock().now().to_msg()
             trinary_msg.scenario_context_id = node.bhv_ctx_id
-            trinary_msg.trinary.value = Trinary.TRUE
+            trinary_msg.trinary.value = Trinary.TRUE if is_placed else Trinary.FALSE
             node.located_place_pub.publish(trinary_msg)
             node.bhv_goal_done = True
             
             node.logger.info('published located place message')
-
-            evt_msg = Event()
-            evt_msg.stamp = node.get_clock().now().to_msg()
-            evt_msg.scenario_context_id = node.bhv_ctx_id
-            evt_msg.uri = EXPORTED_EVENTS['PLACE_END']
-            node.evt_pub.publish(evt_msg)
-            node.logger.info('published place end event')
-            node.bhv_goal_in = False
 
             produce_event(fsm.event_data, EventID.E_EXECUTE_IDLE)
         case _:
