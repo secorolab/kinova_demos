@@ -11,6 +11,7 @@ void FSMInterface::reset_ft_force_estimator()
   ft_reference_count_ = 0;
   ft_reference_sum_.fill(0.0);
   ft_reference_mean_.fill(0.0);
+  ft_rolling_mean_.fill(0.0);
   ft_window_sum_.fill(0.0);
   ft_window_count_ = 0;
   ft_window_index_ = 0;
@@ -127,8 +128,9 @@ bool FSMInterface::update_ft_force_estimate(const SystemState& system_state,
 
   for (int axis = 0; axis < 6; ++axis) {
     const double rolling_mean_value = ft_window_sum_[axis] / static_cast<double>(FT_WINDOW_SIZE);
+    ft_rolling_mean_[axis] = rolling_mean_value;
     corrected_ft_wrt_init_ref[axis] = rolling_mean_value - ft_reference_mean_[axis];
-    corrected_ft_wrt_prev_ref[axis] = rolling_mean_value - system_state.ft_sensor.wrench_BL[axis]; 
+    corrected_ft_wrt_prev_ref[axis] = system_state.ft_sensor.wrench_BL[axis] - rolling_mean_value; 
   }
 
   return true;

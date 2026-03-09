@@ -135,11 +135,12 @@ void FSMInterface::idle(events *eventData, SystemState& system_state){
 
   // TODO: this is to test any behavior. Modify events returned in post_condition; an event to start will be triggered by action server
   task_triggered = false;
+  task_status.goal_in = true;
   if (!task_triggered && task_status.goal_in) 
   {
     task_triggered = true;
-    produce_event(eventData, E_M_TOUCH_TABLE_CONFIG);
-    // produce_event(eventData, E_M_COLLABORATE_CONFIG);
+    // produce_event(eventData, E_M_TOUCH_TABLE_CONFIG);
+    produce_event(eventData, E_M_COLLABORATE_CONFIG);
   }
 
   // TODO: update task_status accordingly throughout the behaviors
@@ -253,6 +254,7 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
         ft_readings_deviation[2] * ft_readings_deviation[2]);
 
       human_interaction_monitoring(corrected_external_force_magnitude);
+      human_interaction_detected = true;
 
       if (human_interaction_detected){
         // if human interation is detected, switch to collaboration gains 
@@ -352,6 +354,9 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
           printf("[Collaborate] Corrected wrench: fx=%6.2f, fy=%6.2f, fz=%6.2f, tx=%6.2f, ty=%6.2f, tz=%6.2f\n",
                 ft_readings_deviation[0], ft_readings_deviation[1], ft_readings_deviation[2],
                 ft_readings_deviation[3], ft_readings_deviation[4], ft_readings_deviation[5]);
+         printf("[Collaborate] Rolling mean wrench: fx=%6.2f, fy=%6.2f, fz=%6.2f, tx=%6.2f, ty=%6.2f, tz=%6.2f\n",
+                ft_rolling_mean_[0], ft_rolling_mean_[1], ft_rolling_mean_[2],
+                ft_rolling_mean_[3], ft_rolling_mean_[4], ft_rolling_mean_[5]);
         }
 
         if (has_corrected_wrench) 

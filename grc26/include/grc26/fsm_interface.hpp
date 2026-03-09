@@ -141,6 +141,7 @@ private:
   std::size_t ft_reference_count_ = 0;
   std::array<double, 6> ft_reference_sum_{};
   std::array<double, 6> ft_reference_mean_{};
+  std::array<double, 6> ft_rolling_mean_{};
 
   std::array<std::array<double, 6>, FT_WINDOW_SIZE> ft_window_samples_{};
   std::array<double, 6> ft_window_sum_{};
