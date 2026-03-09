@@ -36,6 +36,9 @@ public:
 
   KDL::Wrenches& externalWrenches_fext_solver() noexcept { return f_ext_fext_; }
   const KDL::Wrenches& externalWrenches_fext_solver() const noexcept { return f_ext_fext_; }
+
+  KDL::Wrenches& externalWrenches_rnea() noexcept { return f_ext_rnea_; }
+  const KDL::Wrenches& externalWrenches_rnea() const noexcept { return f_ext_rnea_; }
   /*
   Usage:
   auto& f_ext_rt = solver.externalWrenches();
@@ -94,6 +97,7 @@ private:
   KDL::Jacobian alpha_fext_;
   KDL::Wrenches f_ext_;
   KDL::Wrenches f_ext_fext_;
+  KDL::Wrenches f_ext_rnea_;
 
   // RNEA solver variables
   KDL::Twist xdd;

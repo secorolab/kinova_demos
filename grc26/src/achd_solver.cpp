@@ -98,6 +98,7 @@ bool VereshchaginSolver::initialize(unsigned int num_constraints)
   alpha_fext_ = KDL::Jacobian(num_constraints_);
   f_ext_      = KDL::Wrenches(num_segments_);
   f_ext_fext_ = KDL::Wrenches(num_segments_);
+  f_ext_rnea_ = KDL::Wrenches(num_segments_);
 
   // gravity vector from model
   KDL::Vector gravity_vec = model_.gravity();
@@ -134,6 +135,7 @@ bool VereshchaginSolver::initialize(unsigned int num_constraints)
   for (size_t i = 0; i < f_ext_.size(); ++i) {
     f_ext_[i] = KDL::Wrench::Zero();
     f_ext_fext_[i] = KDL::Wrench::Zero();
+    f_ext_rnea_[i] = KDL::Wrench::Zero();
   }
 
   alpha_.setColumn(0, KDL::Twist(KDL::Vector(1, 0, 0), KDL::Vector(0, 0, 0)));
@@ -179,7 +181,7 @@ int VereshchaginSolver::computeTorquesFext()
                                  qdd_fext_,
                                  alpha_fext_,
                                  beta_fext_,
-                                 f_ext_fext_,
+                                 f_ext_rnea_,
                                  ff_taus_fext_,
                                  tau_cmd_fext_);
 }

@@ -323,16 +323,29 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
     // computeTorques adds torques from vn_fixed_joint and vn_fext solvers
 
     // Using V'n solver
-    solver_->computeTorques();
-    solver_->updateTorqueCmdInState(system_state);
+    // solver_->computeTorques();
+    // solver_->updateTorqueCmdInState(system_state);
 
+    // /*
     // Using RNEA solver
-    // solver_->computeTorquesRNEA(arm_kinematics_->jointVelocities(),
-    //                             arm_kinematics_->jointPositions(),
-    //                             arm_kinematics_->jointVelocity(),
-    //                             solver_->externalWrenches());
+    auto& fext_wrenches_rnea = solver_->externalWrenches_rnea(); // f_ext_rnea_;
+    // to test, set external wrench for RNEA solver to be the same as v'n fixed jnt solver
+    for (size_t i = 0; i < fext_wrenches_rnea.size(); ++i) {
+      fext_wrenches_rnea[i] = solver_->externalWrenches()[i];
+    }
+
+    // transform wrenches from base link to corresponding segements for forearm and end-effector
+    fext_wrenches_rnea[2] = arm_kinematics_->forearmPoseBL().M.Inverse() * fext_wrenches_rnea[2]; // transform to forearm frame
+    fext_wrenches_rnea.back() = arm_kinematics_->pose().M.Inverse() * fext_wrenches_rnea.back();
+
+    solver_->computeTorquesRNEA(arm_kinematics_->jointVelocities(),
+                                arm_kinematics_->jointPositions(),
+                                arm_kinematics_->jointVelocity(),
+                                solver_->externalWrenches_rnea());
     
-    // solver_->updateTorqueCmdFromRNEAInState(system_state);
+    solver_->updateTorqueCmdFromRNEAInState(system_state);
+
+    // */
 
     // reset torque commands to zero from all solvers
     solver_->resetTorqueOutputs();
