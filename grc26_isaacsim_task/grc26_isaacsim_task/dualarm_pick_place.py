@@ -335,10 +335,28 @@ class DualArmPickPlace(Node):
         self.bhv_ctx_id = goal_handle.request.scenario_context_id
         self.bhv_goal_done = False
 
-        goal_params = goal_handle.request.parameters
+        self.k1_speed = 0.8
+        self.k2_speed = 0.8
 
-        for paramVal in goal_params:
-            self.logger.info(f'Behavior parameter: {paramVal.param_rel_uri} = {paramVal.paral_val_uris}')
+        for cfg_msg in goal_handle.request.configs:
+            target = cfg_msg.target
+            name   = cfg_msg.name
+            val    = cfg_msg.num_value
+            
+            # grep kinova1 and kinova2 in target uri
+            kinova1 = self.robot.arm1.arm in target
+            kinova2 = self.robot.arm2.arm in target
+
+            if kinova1:
+                self.k1_speed = val
+            elif kinova2:
+                self.k2_speed = val
+
+            self.get_logger().info(
+                f"Bhv Config {target}: {name} = {val}"
+            )
+
+        self.get_logger().info(f"Set arm speeds: k1={self.k1_speed}, k2={self.k2_speed}")
 
         response = Behaviour.Result()
         response.result.scenario_context_id = self.bhv_ctx_id
@@ -738,11 +756,11 @@ def m_grasp_object_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
     return True
 
 def m_collaborate_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
-    ud.arm1_max_vel_sf = 0.2
-    ud.arm1_max_acc_sf = 0.2
-
-    ud.arm2_max_vel_sf = 1.0
-    ud.arm2_max_acc_sf = 1.0
+    ud.arm1_max_vel_sf = node.k1_speed
+    ud.arm1_max_acc_sf = node.k1_speed
+  
+    ud.arm2_max_vel_sf = node.k2_speed
+    ud.arm2_max_acc_sf = node.k2_speed
 
     k1_target_pose = ud.arm1_end_pose
     k2_target_pose = ud.arm2_end_pose
@@ -879,13 +897,7 @@ def execute_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
         case Motions.RELEASE:
             ud.current_motion = Motions.RETRACT
             
-            evt_msg = Event()
-            evt_msg.stamp = node.get_clock().now().to_msg()
-            evt_msg.scenario_context_id = node.bhv_ctx_id
-            evt_msg.uri = EXPORTED_EVENTS['PLACE_END']
-            node.evt_pub.publish(evt_msg)
-            node.logger.info('published place end event')
-            node.bhv_goal_in = False
+           
 
             print(f"Motion '{Motions.RELEASE.name}' completed, transitioning to '{Motions.RETRACT.name}'")
             produce_event(fsm.event_data, EventID.E_M_RETRACT_ARM_CONFIG)
@@ -896,6 +908,14 @@ def execute_step(fsm: FSMData, ud: UserData, node: DualArmPickPlace):
         case Motions.RETURN_HOME:
             ud.current_motion = Motions.NONE
             print(f"Motion '{Motions.RETURN_HOME.name}' completed, all motions done")
+            
+            evt_msg = Event()
+            evt_msg.stamp = node.get_clock().now().to_msg()
+            evt_msg.scenario_context_id = node.bhv_ctx_id
+            evt_msg.uri = EXPORTED_EVENTS['PLACE_END']
+            node.evt_pub.publish(evt_msg)
+            node.logger.info('published place end event')
+            node.bhv_goal_in = False
             
             # pub bhv
             is_placed = node.is_placed()
