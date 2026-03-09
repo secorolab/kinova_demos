@@ -30,25 +30,28 @@ void TaskStatusROSNode::publishCallback()
 
 void TaskStatusROSNode::publishStatus(const TaskStatusData& status)
 {
-    bdd_ros2_interfaces::msg::TrinaryStamped pick_msg;
-    pick_msg.stamp = this->now();
-    pick_msg.scenario_context_id = status.bhv_ctx_id;
-    pick_msg.trinary.value = status.is_obj_located_at_pick_location ? bdd_ros2_interfaces::msg::Trinary::TRUE :
-                             bdd_ros2_interfaces::msg::Trinary::FALSE;
+    if (status.is_obj_located_at_pick_location) {
+        bdd_ros2_interfaces::msg::TrinaryStamped msg;
+        msg.stamp = this->now();
+        msg.scenario_context_id = status.bhv_ctx_id;
+        msg.trinary.value = bdd_ros2_interfaces::msg::Trinary::TRUE;
 
-    bdd_ros2_interfaces::msg::TrinaryStamped is_held_msg;
-    is_held_msg.stamp = this->now();
-    is_held_msg.scenario_context_id = status.bhv_ctx_id;
-    is_held_msg.trinary.value = status.is_obj_held_by_robot ? bdd_ros2_interfaces::msg::Trinary::TRUE :
-                                  bdd_ros2_interfaces::msg::Trinary::FALSE;
+        located_pick_pub_->publish(msg);
+    }
+    if (status.is_obj_held_by_robot) {
+        bdd_ros2_interfaces::msg::TrinaryStamped msg;
+        msg.stamp = this->now();
+        msg.scenario_context_id = status.bhv_ctx_id;
+        msg.trinary.value = bdd_ros2_interfaces::msg::Trinary::TRUE;
+        
+        is_held_pub_->publish(msg);
+    }
+    if (status.is_obj_located_at_place_location) {
+        bdd_ros2_interfaces::msg::TrinaryStamped msg;
+        msg.stamp = this->now();
+        msg.scenario_context_id = status.bhv_ctx_id;
+        msg.trinary.value =bdd_ros2_interfaces::msg::Trinary::TRUE;
 
-    bdd_ros2_interfaces::msg::TrinaryStamped place_msg;
-    place_msg.stamp = this->now();
-    place_msg.scenario_context_id = status.bhv_ctx_id;
-    place_msg.trinary.value = status.is_obj_located_at_place_location ? bdd_ros2_interfaces::msg::Trinary::TRUE :
-                               bdd_ros2_interfaces::msg::Trinary::FALSE;
-
-    located_pick_pub_->publish(pick_msg);
-    is_held_pub_->publish(is_held_msg);
-    located_place_pub_->publish(place_msg);
+        located_place_pub_->publish(msg);
+    }
 }
