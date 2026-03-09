@@ -136,7 +136,7 @@ int main(int argc, char ** argv)
 
   auto node = std::make_shared<TaskStatusROSNode>(task_status);
   auto debug_node = std::make_shared<DebugStateROSNode>(debug_buffer);
-  auto action_server_node = std::make_shared<ActionServerNode>(bhv_state);
+  auto action_server_node = std::make_shared<ActionServerNode>(task_status);
 
   rclcpp::executors::MultiThreadedExecutor executor(
       rclcpp::ExecutorOptions(), 2);

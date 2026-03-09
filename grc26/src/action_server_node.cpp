@@ -3,8 +3,8 @@
 #include <functional>
 #include <thread>
 
-ActionServerNode::ActionServerNode(std::shared_ptr<BehaviourState> bhv_state)
-    : Node("action_server_node"), bhv_state_(bhv_state)
+ActionServerNode::ActionServerNode(std::shared_ptr<TaskStatus> task_status)
+    : Node("action_server_node"), task_status_(task_status)
 {
     using namespace std::placeholders;
 
@@ -28,7 +28,9 @@ rclcpp_action::GoalResponse ActionServerNode::handle_goal(
     std::shared_ptr<const Behaviour::Goal> goal)
 {
     (void)uuid;
-    if (!bhv_state_->goal_done) {
+    TaskStatusData current_status;
+    task_status_->getLatest(current_status);
+    if (current_status.goal_in) {
         RCLCPP_WARN(this->get_logger(), "Received new goal while another is still active. Rejecting.");
         return rclcpp_action::GoalResponse::REJECT;
     }
@@ -40,33 +42,43 @@ rclcpp_action::CancelResponse ActionServerNode::handle_cancel(
     const std::shared_ptr<GoalHandleBehaviour> goal_handle)
 {
     (void)goal_handle;
+    TaskStatusData current_status;
+    task_status_->getLatest(current_status);
     RCLCPP_INFO(this->get_logger(), "Behavior execution canceled");
+    current_status.goal_in = false;
+    task_status_->update(current_status);
     return rclcpp_action::CancelResponse::ACCEPT;
 }
 
 void ActionServerNode::handle_accepted(
     const std::shared_ptr<GoalHandleBehaviour> goal_handle)
 {
+    TaskStatusData current_status;
+    task_status_->getLatest(current_status);
+    current_status.goal_in = true;
+    task_status_->update(current_status);
     std::thread([this, goal_handle]() { this->execute(goal_handle); }).detach();
 }
 
 void ActionServerNode::execute(
     const std::shared_ptr<GoalHandleBehaviour> goal_handle)
 {
+    TaskStatusData current_status;
+    task_status_->getLatest(current_status);
     const auto goal = goal_handle->get_goal();
-    bhv_state_->bhv_ctx_id = goal->scenario_context_id;
-    bhv_state_->goal_done = false;
+    current_status.bhv_ctx_id = goal->scenario_context_id;
+    current_status.task_completed = false;
+    task_status_->update(current_status);
 
     auto response = std::make_shared<Behaviour::Result>();
-    response->result.scenario_context_id = bhv_state_->bhv_ctx_id;
+    response->result.scenario_context_id = current_status.bhv_ctx_id;
 
     auto feedback = std::make_shared<Behaviour::Feedback>();
-    feedback->scenario_context_id = bhv_state_->bhv_ctx_id;
-
-    bhv_state_->goal_in = true;
+    feedback->scenario_context_id = current_status.bhv_ctx_id;
 
     rclcpp::WallRate rate(100.0);
-    while (rclcpp::ok() && !bhv_state_->goal_done)
+    task_status_->getLatest(current_status);
+    while (rclcpp::ok() && !current_status.task_completed)
     {
         if (goal_handle->is_canceling()) {
             goal_handle->canceled(response);
@@ -78,7 +90,8 @@ void ActionServerNode::execute(
     }
     
     response->result.stamp = this->now();
-    response->result.trinary.value = bdd_ros2_interfaces::msg::Trinary::TRUE;
+    task_status_->getLatest(current_status);
+    response->result.trinary.value = current_status.task_completed ? bdd_ros2_interfaces::msg::Trinary::TRUE : bdd_ros2_interfaces::msg::Trinary::FALSE;
 
     goal_handle->succeed(response);
     RCLCPP_INFO(this->get_logger(), "Behavior execution succeeded");

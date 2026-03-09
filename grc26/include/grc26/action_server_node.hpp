@@ -5,6 +5,8 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include "bdd_ros2_interfaces/action/behaviour.hpp"
 #include "bdd_ros2_interfaces/msg/trinary.hpp"
+#include "grc26/msg/task_status.hpp"
+#include "grc26/task_status.hpp"
 
 struct BehaviourState {
     unique_identifier_msgs::msg::UUID bhv_ctx_id;
@@ -15,7 +17,7 @@ struct BehaviourState {
 class ActionServerNode : public rclcpp::Node
 {
 public:
-    ActionServerNode(std::shared_ptr<BehaviourState> bhv_state);
+    ActionServerNode(std::shared_ptr<TaskStatus> task_status);
 
 private:
     using Behaviour = bdd_ros2_interfaces::action::Behaviour;
@@ -32,7 +34,7 @@ private:
     void execute(const std::shared_ptr<GoalHandleBehaviour> goal_handle);
 
     rclcpp_action::Server<Behaviour>::SharedPtr action_server_;
-    std::shared_ptr<BehaviourState> bhv_state_;
+    std::shared_ptr<TaskStatus> task_status_;
 };
 
 #endif // ACTION_SERVER_NODE_HPP

@@ -1,3 +1,4 @@
+unique_identifier_msgs/UUID bhv_ctx_id
 bool goal_in
 bool task_completed
 bool is_obj_located_at_pick_location

@@ -24,6 +24,7 @@ find_package(kdl_parser REQUIRED)
 find_package(orocos_kdl REQUIRED)
 find_package(coord2b REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(unique_identifier_msgs REQUIRED)
 
 include_directories(
   include
@@ -39,7 +40,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PIDDebug.msg"
   "msg/CartesianPIDDebug.msg"
   "msg/TaskStatus.msg"
-  DEPENDENCIES std_msgs
+  DEPENDENCIES std_msgs unique_identifier_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

@@ -5,12 +5,16 @@
 #include <chrono>
 #include <cstdint>
 
+#include "unique_identifier_msgs/msg/uuid.hpp"
+
 struct TaskStatusData
 {
-    bool idle = false;
-    bool human_initiation = false;
-    bool task_completion = false;
-    bool obj_held_by_human = false;
+    unique_identifier_msgs::msg::UUID bhv_ctx_id;
+    bool goal_in = false;
+    bool task_completed = false;
+    bool is_obj_located_at_pick_location = false;
+    bool is_obj_held_by_robot = false;
+    bool is_obj_located_at_place_location = false;
 
     uint64_t sequence_number = 0;
     std::chrono::high_resolution_clock::time_point timestamp;
