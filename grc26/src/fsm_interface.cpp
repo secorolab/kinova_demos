@@ -24,7 +24,7 @@ void FSMInterface::configure(events *eventData, SystemState& system_state){
   // Initialize final EE pose for trajectory tracking
   final_ee_pose_ = KDL::Frame(
                     KDL::Rotation::RPY(-1.55, 0.05, -2.80), 
-                    KDL::Vector(0.24, -0.56, 0.05));
+                    KDL::Vector(0.24, -0.5, 0.05));
 
   // initialise KDL model of the arm from URDF
   model_ = std::make_unique<ArmKDLModel>();
@@ -200,7 +200,6 @@ void FSMInterface::idle(events *eventData, SystemState& system_state){
 
 void FSMInterface::execute(events *eventData, SystemState& system_state){
 
-  printf("In idle state. Waiting for task to be triggered...\n");
   task_status.goal_in = true; // TODO: comment this line. Used for testing
   if (!task_triggered && task_status.goal_in) 
   {
@@ -231,7 +230,8 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
     if (task_spec.collaborate_spec.enabled)
     {
       if (!system_state.ft_sensor.present) {
-        printf("[Warning] Collaboration enabled but FT sensor not present\n");
+        printf("[Warning] Collaboration enabled but FT sensor not present. Not chcking for human interaction\n");
+        task_spec.follow_trajectory = true;
       }
       else if (!has_corrected_wrench)
       {
@@ -555,12 +555,12 @@ void FSMInterface::touch_table_behavior_config(events *eventData, SystemState& s
   task_spec.post_condition.constraints[0].type = ConstraintType::Position;
   task_spec.post_condition.constraints[0].axis = 2;     // z-axis
   task_spec.post_condition.constraints[0].op = CompareOp::LessEqual;
-  task_spec.post_condition.constraints[0].value = 0.06; // m
+  task_spec.post_condition.constraints[0].value = 0.07; // m
 
   task_spec.post_condition.constraints[1].type = ConstraintType::Velocity;
   task_spec.post_condition.constraints[1].axis = 2;     // z-axis
   task_spec.post_condition.constraints[1].op = CompareOp::LessEqual;
-  task_spec.post_condition.constraints[1].value = 0.01; // m/s
+  task_spec.post_condition.constraints[1].value = 0.015; // m/s
 
   produce_event(eventData, E_M_TOUCH_TABLE_CONFIGURED);
 }
@@ -594,7 +594,7 @@ void FSMInterface::slide_on_table_behavior_config(events *eventData, SystemState
   task_spec.post_condition.constraints[0].type = ConstraintType::Position;
   task_spec.post_condition.constraints[0].axis = 0; // x-axis
   task_spec.post_condition.constraints[0].op = CompareOp::GreaterEqual;
-  task_spec.post_condition.constraints[0].value = 0.65; // m
+  task_spec.post_condition.constraints[0].value = 0.55; // m
 
   // task_spec.post_condition.constraints[1].type = ConstraintType::Position;
   // task_spec.post_condition.constraints[1].axis = 2; // z-axis
@@ -695,7 +695,7 @@ void FSMInterface::collaborate_behavior_config(events *eventData, SystemState& s
   task_spec.post_condition.constraints[0].type  = ConstraintType::Position;
   task_spec.post_condition.constraints[0].axis  = 2; // z-axis
   task_spec.post_condition.constraints[0].op    = CompareOp::LessEqual;
-  task_spec.post_condition.constraints[0].value = 0.01; // m
+  task_spec.post_condition.constraints[0].value = 0.04; // m
 
   produce_event(eventData, E_M_COLLABORATE_CONFIGURED);
 }

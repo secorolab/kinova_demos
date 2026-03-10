@@ -48,7 +48,7 @@ int main(int argc, char ** argv)
   SystemState system_state;
   system_state.gripper.present = false;
   system_state.arm.present = true;
-  system_state.ft_sensor.present = true;
+  system_state.ft_sensor.present = false;
 
   TaskStatusData status;
 
