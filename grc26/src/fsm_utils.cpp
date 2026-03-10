@@ -332,7 +332,15 @@ void FSMInterface::check_post_condition(events *eventData, const SystemState& sy
     }
     else if (fsm_execution_state == S_M_COLLABORATE){
       task_status.is_obj_located_at_pick_location = false;
-      task_status.is_obj_located_at_place_location = false;
+      double distance_to_final_pose = std::abs(std::sqrt(std::pow(arm_kinematics_->pose().p.x() - final_ee_pose_.p.x(), 2) +
+                                      std::pow(arm_kinematics_->pose().p.y() - final_ee_pose_.p.y(), 2) +
+                                      std::pow(arm_kinematics_->pose().p.z() - final_ee_pose_.p.z(), 2)));
+      if (distance_to_final_pose <= placement_threshold) {
+        task_status.is_obj_located_at_place_location = true;
+      }
+      else {
+        task_status.is_obj_located_at_place_location = false;
+      }
       task_status.is_obj_held_by_robot = true;
       task_status.task_completed = false;
       printf("Completed collaborate behavior\n");
@@ -347,8 +355,17 @@ void FSMInterface::check_post_condition(events *eventData, const SystemState& sy
       printf("Completed release object behavior\n");
       task_status.is_obj_held_by_robot = false;
       task_status.is_obj_located_at_pick_location = false;
-      task_status.is_obj_located_at_place_location = true;
-      task_status.task_completed = true;
+      double distance_to_final_pose = std::abs(std::sqrt(std::pow(arm_kinematics_->pose().p.x() - final_ee_pose_.p.x(), 2) +
+                                      std::pow(arm_kinematics_->pose().p.y() - final_ee_pose_.p.y(), 2) +
+                                      std::pow(arm_kinematics_->pose().p.z() - final_ee_pose_.p.z(), 2)));
+      if (distance_to_final_pose <= placement_threshold) {
+        task_status.is_obj_located_at_place_location = true;
+        task_status.task_completed = true;
+      }
+      else {
+        task_status.is_obj_located_at_place_location = false;
+        task_status.task_completed = false;
+      }
       task_status.is_place_end = true;
       produce_event(eventData, E_ENTER_IDLE);
     }

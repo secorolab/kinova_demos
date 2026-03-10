@@ -128,6 +128,7 @@ private:
   int interaction_detection_counter_limit = 10;
   int loss_of_interaction_detection_counter_limit = 2000;
   int interaction_counter = 0;
+  double placement_threshold = 0.05; // m
 
   bool in_comm_with_hw;
   e_states fsm_execution_state;
