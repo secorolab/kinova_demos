@@ -196,17 +196,12 @@ void FSMInterface::idle(events *eventData, SystemState& system_state){
     task_spec.orientation.rpy[2] = yaw;   // yaw
   }
 
-  // TODO: POST condition for task status
-  /* If force spike observed when holding tray: human_initiation = true
-     If persistent constant force equal to object weight observed when holding tray: obj_held_by_human = false
-     If object reaches desired position: task_completion = true */
-
 }
 
 void FSMInterface::execute(events *eventData, SystemState& system_state){
 
-  // printf("In idle state. Waiting for task to be triggered...\n");
-  // printf("task_status.goal_in: %d\n", task_status.goal_in);
+  printf("In idle state. Waiting for task to be triggered...\n");
+  task_status.goal_in = true; // TODO: comment this line. Used for testing
   if (!task_triggered && task_status.goal_in) 
   {
     task_triggered = true;
@@ -223,8 +218,8 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
                                                             corrected_ft_wrt_prev_ref);
 
   // selecting any of these two to test human interaction detection
-  auto ft_readings_deviation = corrected_ft_wrt_prev_ref;
-  // auto ft_readings_deviation = corrected_ft_wrt_init_ref;
+  // auto ft_readings_deviation = corrected_ft_wrt_prev_ref;
+  auto ft_readings_deviation = corrected_ft_wrt_init_ref;
 
 
   // check if solvers should be used based on task specification
@@ -253,6 +248,15 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
       human_interaction_monitoring(corrected_external_force_magnitude);
       // human_interaction_detected = true;
 
+      printf("HUMAN INTERACTION DETECTED: %s\n", human_interaction_detected ? "YES" : "NO");
+      bool test_human_interaction_detection = false;
+
+      if (test_human_interaction_detection)
+      {
+        task_spec.follow_trajectory = false;
+        compute_ctr_cmd_obj.setGains(ctr_config_collaborate.controllers());
+      }
+
       if (human_interaction_detected){
         // if human interation is detected, switch to collaboration gains 
         // and set follow_trajectory to false and is_trajectory_computed to false
@@ -277,13 +281,16 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
         task_spec.orientation.rpy[2] = -M_PI / 2;
       }
       else if (!human_interaction_detected){
-        compute_ctr_cmd_obj.setGains(ctr_config_traj_tracking.controllers());
-        if (!is_trajectory_computed_) {
-          compute_trajectory();
-          is_trajectory_computed_ = true;
-        }
-        if (!task_spec.follow_trajectory) {
-          task_spec.follow_trajectory = true;
+        if (!test_human_interaction_detection)
+        {
+          compute_ctr_cmd_obj.setGains(ctr_config_traj_tracking.controllers());
+          if (!is_trajectory_computed_) {
+            compute_trajectory();
+            is_trajectory_computed_ = true;
+          }
+          if (!task_spec.follow_trajectory) {
+            task_spec.follow_trajectory = true;
+          }
         }
       }
     }
@@ -505,8 +512,8 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
   if (false && system_state.ft_sensor.present)
   {
     printf("FT sensor readings: fx=%6.2f, fy=%6.2f, fz=%6.2f, tx=%6.2f, ty=%6.2f, tz=%6.2f\n", 
-      system_state.ft_sensor.fx, system_state.ft_sensor.fy, system_state.ft_sensor.fz, 
-      system_state.ft_sensor.tx, system_state.ft_sensor.ty, system_state.ft_sensor.tz);
+      system_state.ft_sensor.fx_BL, system_state.ft_sensor.fy_BL, system_state.ft_sensor.fz_BL, 
+      system_state.ft_sensor.tx_BL, system_state.ft_sensor.ty_BL, system_state.ft_sensor.tz_BL);
   }
 
   check_post_condition(eventData, system_state, task_spec);
@@ -678,9 +685,9 @@ void FSMInterface::collaborate_behavior_config(events *eventData, SystemState& s
 
   task_spec.follow_trajectory = true;
   task_spec.collaborate_spec.enabled = true; // current logic: if enabled, start traj following, then on human intervention, switch to collaboration
-  task_spec.collaborate_spec.magnification_factor = 25.0;     // scale
-  task_spec.collaborate_spec.external_force_deadband  = 0.15; // N
-  task_spec.collaborate_spec.f_ext_saturation_limit = 10.0;  // N
+  task_spec.collaborate_spec.magnification_factor = 7.0;    // scale
+  task_spec.collaborate_spec.external_force_deadband  = 2.5; // N
+  task_spec.collaborate_spec.f_ext_saturation_limit = 7.0;  // N
 
   task_spec.post_condition.available = true;
   task_spec.post_condition.num_constraints = 1;

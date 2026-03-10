@@ -125,8 +125,8 @@ private:
   bool is_trajectory_computed_ = false;
   std::chrono::steady_clock::time_point trajectory_start_time_{};
   bool human_interaction_detected = false;
-  int interaction_detection_counter_limit = 100;
-  int loss_of_interaction_detection_counter_limit = 3000;
+  int interaction_detection_counter_limit = 10;
+  int loss_of_interaction_detection_counter_limit = 2000;
   int interaction_counter = 0;
 
   bool in_comm_with_hw;
