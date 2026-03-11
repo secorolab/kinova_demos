@@ -131,7 +131,7 @@ void ComputeControllerCommand::compute(
             // printf("%f, %f, %f\n", 
             //     desired_ee_rot_(2,0), desired_ee_rot_(2,1), desired_ee_rot_(2,2));
 
-            printf("[Orientation control]: RPY error [%f, %f, %f]\n", diff(0), diff(1), diff(2));
+            // printf("[Orientation control]: RPY error [%f, %f, %f]\n", diff(0), diff(1), diff(2));
 
             for (int i = 0; i < 3; ++i){
                 const double rot_err = diff(i);
@@ -140,7 +140,7 @@ void ComputeControllerCommand::compute(
                     const double pid_output = controllers_.cart_ctrl[i+3].control(rot_err, dt);
                     f_ext[seg](3 + i) = -pid_output;
                     capture_pid_axis(3 + i, controllers_.cart_ctrl[i+3], rot_err, pid_output);
-                    printf("[Orientation control]: external torque for axis %d: %f\n", i, pid_output);
+                    // printf("[Orientation control]: external torque for axis %d: %f\n", i, pid_output);
                     // beta(3 + i) = controllers_.cart_ctrl[i+3].control(diff(i));
                     // printf("[Orientation control]: beta for axis %d: %f\n", i, beta(3 + i));
                 }

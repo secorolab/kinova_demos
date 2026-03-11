@@ -17,6 +17,7 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(rosidl_default_runtime REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(robif2b REQUIRED)
 find_package(bdd_ros2_interfaces REQUIRED)
@@ -80,6 +81,7 @@ ament_target_dependencies(kinova_single_arm_demo
   geometry_msgs
   bdd_ros2_interfaces
   kdl_parser
+  control_msgs
   )
   
 target_link_libraries(kinova_single_arm_demo
@@ -114,6 +116,7 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
     geometry_msgs
     bdd_ros2_interfaces
     kdl_parser
+    control_msgs
     )
   target_link_libraries(${TEST_NAME}
     robif2b::kinova_gen3

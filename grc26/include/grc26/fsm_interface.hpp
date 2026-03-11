@@ -61,7 +61,6 @@ class FSMInterface
 public:
   explicit FSMInterface(SystemState& system_state,
                           robif2b_kinova_gen3_nbx& rob, 
-                          robif2b_kg3_robotiq_gripper_nbx& gripper,
                           robif2b_robotiq_ft_nbx& ft_sensor,
                           TaskStatusData& status);
   ~FSMInterface();
@@ -105,7 +104,6 @@ public:
 private:
   SystemState& system_state;
   robif2b_kinova_gen3_nbx& rob;
-  robif2b_kg3_robotiq_gripper_nbx& gripper;
   robif2b_robotiq_ft_nbx& ft_sensor;
   TaskStatusData& task_status;
   TaskSpec task_spec;
@@ -132,6 +130,7 @@ private:
   int loss_of_interaction_detection_counter_limit = 2000;
   int interaction_counter = 0;
   double placement_threshold = 0.05; // m
+  bool to_log = false;
 
   bool in_comm_with_hw;
   e_states fsm_execution_state;

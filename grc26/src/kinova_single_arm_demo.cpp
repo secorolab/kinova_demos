@@ -46,7 +46,7 @@ int main(int argc, char ** argv)
   // --------------------- robot communication setup ---------------------
 
   SystemState system_state;
-  system_state.gripper.present = false;
+  system_state.gripper.present = true;
   system_state.arm.present = true;
   system_state.ft_sensor.present = true;
 
@@ -63,9 +63,6 @@ int main(int argc, char ** argv)
         .connection_timeout = 2000};
 
   bindKinovaArm(arm, system_state);
-
-  robif2b_kg3_robotiq_gripper_nbx gripper;
-  bindRobotiqGripper(gripper, system_state);
 
   robif2b_robotiq_ft_nbx ft_sensor;
   ft_sensor.conf.device = "/dev/ttyUSB0";
@@ -131,7 +128,7 @@ int main(int argc, char ** argv)
 
   auto task_status = std::make_shared<TaskStatus>();
   auto debug_buffer = std::make_shared<DebugSignalBuffer>(4000);
-  auto fsm_interface = std::make_shared<FSMInterface>(system_state, arm, gripper, ft_sensor, status);
+  auto fsm_interface = std::make_shared<FSMInterface>(system_state, arm, ft_sensor, status);
   auto bhv_state = std::make_shared<BehaviourState>();
 
   auto node = std::make_shared<TaskStatusROSNode>(task_status);
@@ -164,6 +161,10 @@ int main(int argc, char ** argv)
 
   while (!shutting_down.load()){
     ft_hw_active.store(fsm_interface->is_in_comm_with_hw(), std::memory_order_relaxed);
+
+    if (system_state.gripper.present){
+
+    }
 
     if (system_state.ft_sensor.present) {
       std::lock_guard<std::mutex> lock(ft_snapshot_mutex);
@@ -297,8 +298,7 @@ int main(int argc, char ** argv)
       robif2b_robotiq_ft_shutdown(&ft_sensor);
     }
     if (system_state.gripper.present) {
-      std::cout << "Stopping gripper..." << std::endl;
-      robif2b_kg3_robotiq_gripper_stop(&gripper);
+      std::cout << "Intending to stop gripper..." << std::endl;
     }
     std::cout << "Shutting down arm..." << std::endl;
     robif2b_kinova_gen3_stop(&arm);

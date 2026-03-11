@@ -98,7 +98,7 @@ struct LinkLinearForceCommand
     double force[3] = {0};
 };
 
-struct GripperCommand
+struct GripperCommandTSPec
 {
     bool   enabled = false;
     float position;
@@ -119,7 +119,7 @@ struct TaskSpec
     CollaborateSpec        collaborate_spec;
     JointPositionCommand   joint_position;
     LinkLinearForceCommand link_force;
-    GripperCommand         gripper;
+    GripperCommandTSPec         gripper;
     PostCondition          post_condition;
     bool follow_trajectory = false;
     bool forearm_yaw_control_enabled = false; // if true, will control forearm yaw to be constant throughout the task

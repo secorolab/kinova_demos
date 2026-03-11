@@ -19,6 +19,12 @@ struct TaskStatusData
     bool is_pick_end = false;
     bool is_place_start = false;
     bool is_place_end = false;
+    double desired_gripper_pos  = 0.0; // m
+    double measured_gripper_pos = 0.0; // m
+    bool gripper_send_goal = false;
+    bool gripper_goal_sent = false;
+    bool gripper_goal_result_received = false;
+    bool gripper_goal_success = false;
 
     uint64_t sequence_number = 0;
     std::chrono::high_resolution_clock::time_point timestamp;

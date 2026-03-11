@@ -245,14 +245,14 @@ void FSMInterface::check_post_condition(events *eventData, const SystemState& sy
         if (constraint.axis < 3)
           value = arm_kinematics_->pose().p[constraint.axis];
         else if (constraint.axis == 3)
-          value = system_state.gripper.pos_msr[0];
+          value = task_status.measured_gripper_pos;
         break;
 
       case ConstraintType::Velocity:
         if (constraint.axis < 3)
           value = arm_kinematics_->twist().vel[constraint.axis];
         else if (constraint.axis == 3)
-          value = system_state.gripper.vel_msr[0];
+          printf("Velocity constraint on gripper not supported\n");
         break;
 
       case ConstraintType::Force:
