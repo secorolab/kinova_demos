@@ -313,30 +313,30 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
       // print percentage of time elapsed
       printf("\n[Trajectory] Elapsed time: %6.2f / %6.2f seconds (%3.0f%%)\n", elapsed_time_s, trajectory_duration_s, (elapsed_time_s / trajectory_duration_s) * 100.0);
 
-      const KDL::Twist desired_twist = trajectory_->Vel(clamped_time_s);
-      const KDL::Frame desired_pose = trajectory_->Pos(clamped_time_s);
+      const KDL::Twist desired_twist_traj_tracking = trajectory_->Vel(clamped_time_s);
+      const KDL::Frame desired_pose_traj_tracking = trajectory_->Pos(clamped_time_s);
 
       task_spec.ee_linear.enabled = true;
       task_spec.ee_linear.mode[0] = LinearMode::Velocity;
       task_spec.ee_linear.mode[1] = LinearMode::Velocity;
       task_spec.ee_linear.mode[2] = LinearMode::Velocity;
-      task_spec.ee_linear.velocity[0] = desired_twist.vel.x();
-      task_spec.ee_linear.velocity[1] = desired_twist.vel.y();
-      task_spec.ee_linear.velocity[2] = desired_twist.vel.z();
-      printf("[Trajectory] Desired EE v'ty: [%6.2f, %6.2f, %6.2f]\n", desired_twist.vel.x(), desired_twist.vel.y(), desired_twist.vel.z());
+      task_spec.ee_linear.velocity[0] = desired_twist_traj_tracking.vel.x();
+      task_spec.ee_linear.velocity[1] = desired_twist_traj_tracking.vel.y();
+      task_spec.ee_linear.velocity[2] = desired_twist_traj_tracking.vel.z();
+      printf("[Trajectory] Desired EE v'ty: [%6.2f, %6.2f, %6.2f]\n", desired_twist_traj_tracking.vel.x(), desired_twist_traj_tracking.vel.y(), desired_twist_traj_tracking.vel.z());
       printf("[Trajectory] Current EE v'ty: [%6.2f, %6.2f, %6.2f]\n", arm_kinematics_->twist().vel.x(), arm_kinematics_->twist().vel.y(), arm_kinematics_->twist().vel.z());
-      printf("[Trajectory] Desired EE pose: [%6.2f, %6.2f, %6.2f]\n", desired_pose.p.x(), desired_pose.p.y(), desired_pose.p.z());
+      printf("[Trajectory] Desired EE pose: [%6.2f, %6.2f, %6.2f]\n", desired_pose_traj_tracking.p.x(), desired_pose_traj_tracking.p.y(), desired_pose_traj_tracking.p.z());
       printf("[Trajectory] Current EE pose: [%6.2f, %6.2f, %6.2f]\n", arm_kinematics_->pose().p.x(), arm_kinematics_->pose().p.y(), arm_kinematics_->pose().p.z());
       printf("[Trajectory] Deviation from desired pose: [%6.2f, %6.2f, %6.2f]\n", 
-            desired_pose.p.x() - arm_kinematics_->pose().p.x(), 
-            desired_pose.p.y() - arm_kinematics_->pose().p.y(), 
-            desired_pose.p.z() - arm_kinematics_->pose().p.z());
+            desired_pose_traj_tracking.p.x() - arm_kinematics_->pose().p.x(), 
+            desired_pose_traj_tracking.p.y() - arm_kinematics_->pose().p.y(), 
+            desired_pose_traj_tracking.p.z() - arm_kinematics_->pose().p.z());
 
       task_spec.orientation.enabled = true;
       task_spec.orientation.mode = OrientationMode::Position;
       task_spec.orientation.segment_index = 8;
       double roll, pitch, yaw;
-      desired_pose.M.GetRPY(roll, pitch, yaw);
+      desired_pose_traj_tracking.M.GetRPY(roll, pitch, yaw);
       task_spec.orientation.rpy[0] = roll;
       task_spec.orientation.rpy[1] = pitch;
       task_spec.orientation.rpy[2] = yaw;
@@ -695,7 +695,7 @@ void FSMInterface::collaborate_behavior_config(events *eventData, SystemState& s
   task_spec.post_condition.constraints[0].type  = ConstraintType::Position;
   task_spec.post_condition.constraints[0].axis  = 2; // z-axis
   task_spec.post_condition.constraints[0].op    = CompareOp::LessEqual;
-  task_spec.post_condition.constraints[0].value = 0.04; // m
+  task_spec.post_condition.constraints[0].value = 0.045; // m
 
   produce_event(eventData, E_M_COLLABORATE_CONFIGURED);
 }

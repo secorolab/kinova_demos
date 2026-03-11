@@ -120,6 +120,9 @@ private:
   bool task_triggered = false;
 
   KDL::Frame final_ee_pose_;
+  KDL::Twist desired_twist_traj_tracking;
+  KDL::Frame desired_pose_traj_tracking;
+
   std::unique_ptr<TrajectoryGenerator> trajectory_object_;
   KDL::Trajectory* trajectory_ = nullptr;
   bool is_trajectory_computed_ = false;
