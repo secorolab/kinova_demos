@@ -14,6 +14,7 @@
   <depend>ament_index_cpp</depend>
   
   <depend>bdd_ros2_interfaces</depend>
+  <depend>control_msgs</depend>
   <depend>robif2b</depend>
   <depend>coord2b</depend>
   <depend>orocos_kdl</depend>
