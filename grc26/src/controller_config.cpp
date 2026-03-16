@@ -28,6 +28,28 @@ bool ControllerConfig::load(const std::string& file)
 
     YAML::Node root = YAML::LoadFile(path);
 
+    auto cartesian_lin_traj_ctrl = root["linear_traj_pid"];
+    if (cartesian_lin_traj_ctrl)
+    {
+      for (int i = 0; i < 3; ++i)
+      {
+        const std::string axis = (i == 0 ? "x" : (i == 1 ? "y" : "z"));
+        const YAML::Node node = cartesian_lin_traj_ctrl[axis];
+        if (node)
+        {
+          controllers_.cart_ctrl[i].set_params(
+              node["kp"] ? node["kp"].as<double>() : controllers_.cart_ctrl[i].kp,
+              node["ki"] ? node["ki"].as<double>() : controllers_.cart_ctrl[i].ki,
+              node["kd"] ? node["kd"].as<double>() : controllers_.cart_ctrl[i].kd,
+              node["error_sum_tol"] ? node["error_sum_tol"].as<double>()       : controllers_.cart_ctrl[i].err_sum_tol,
+              node["decay_rate"] ? node["decay_rate"].as<double>()             : controllers_.cart_ctrl[i].decay_rate,
+              node["dead_zone_limit"] ? node["dead_zone_limit"].as<double>()   : controllers_.cart_ctrl[i].dead_zone_limit,
+              node["lp_filter_alpha"] ? node["lp_filter_alpha"].as<double>()   : controllers_.cart_ctrl[i].lp_filter_alpha,
+              node["saturation_limit"] ? node["saturation_limit"].as<double>() : controllers_.cart_ctrl[i].saturation_limit);
+        }
+      }
+    }
+
     auto cartesian_lin_ctrl = root["linear_vel_pid"];
     if (cartesian_lin_ctrl)
     {

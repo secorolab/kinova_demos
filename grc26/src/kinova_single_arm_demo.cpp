@@ -199,6 +199,7 @@ Gripper control logic:
               gripper_io.pos_msr.store(gripperRegisterToPercent(pos_register), std::memory_order_relaxed);
               gripper_io.vel_msr.store(moving ? 1.0f : 0.0f, std::memory_order_relaxed);
               gripper_io.cur_msr.store(0.0f, std::memory_order_relaxed);
+              gripper_io.is_gripper_moving.store(moving, std::memory_order_relaxed);
 
               if (!moving) {
                 gripper_io.gripper_control_completed.store(true, std::memory_order_relaxed);
@@ -206,11 +207,13 @@ Gripper control logic:
               }
             } else {
               command_sent = false;
+              gripper_io.is_gripper_moving.store(false, std::memory_order_relaxed);
               gripper_io.gripper_control_completed.store(false, std::memory_order_relaxed);
             }
           } catch (const std::exception&) {
             printf("Error occurred while updating gripper state\n");
-            gripper_io.gripper_control_completed.store(false, std::memory_order_relaxed);
+            gripper_io.is_gripper_moving.store(false, std::memory_order_relaxed);
+            gripper_io.gripper_control_completed.store(true, std::memory_order_relaxed);
             gripper_driver.reset();
             command_sent = false;
           }
@@ -277,6 +280,7 @@ Gripper control logic:
       system_state.gripper.pos_msr[0] = gripper_io.pos_msr.load(std::memory_order_relaxed);
       system_state.gripper.vel_msr[0] = gripper_io.vel_msr.load(std::memory_order_relaxed);
       system_state.gripper.cur_msr[0] = gripper_io.cur_msr.load(std::memory_order_relaxed);
+      system_state.gripper.is_gripper_moving = gripper_io.is_gripper_moving.load(std::memory_order_relaxed);
       system_state.gripper.gripper_control_completed = gripper_io.gripper_control_completed.load(std::memory_order_relaxed);
     }
 
@@ -340,7 +344,15 @@ Gripper control logic:
     TaskStatusData merged_status = status;
     merged_status.goal_in = latest_status_after_fsm.goal_in;
     merged_status.bhv_ctx_id = latest_status_after_fsm.bhv_ctx_id;
-    merged_status.task_completed = status.task_completed || latest_status_after_fsm.task_completed;
+    if (status.task_completed == trinary_fluents::TRUE ||
+        latest_status_after_fsm.task_completed == trinary_fluents::TRUE) {
+      merged_status.task_completed = trinary_fluents::TRUE;
+    } else if (status.task_completed == trinary_fluents::FALSE &&
+               latest_status_after_fsm.task_completed == trinary_fluents::FALSE) {
+      merged_status.task_completed = trinary_fluents::FALSE;
+    } else {
+      merged_status.task_completed = trinary_fluents::UNKNOWN;
+    }
 
     task_status->update(merged_status);
 

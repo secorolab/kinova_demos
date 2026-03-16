@@ -7,6 +7,7 @@
 #include <grc26/msg/task_status.hpp>
 
 #include "grc26/task_status.hpp"
+#include "coord2b/functions/fsm.h"
 
 #include "bdd_ros2_interfaces/msg/event.hpp"
 #include "bdd_ros2_interfaces/msg/trinary_stamped.hpp"

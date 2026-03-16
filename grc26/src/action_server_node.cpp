@@ -72,7 +72,7 @@ void ActionServerNode::execute(
     const auto goal = goal_handle->get_goal();
     current_status.bhv_ctx_id = goal->scenario_context_id;
     current_status.goal_in = true;
-    current_status.task_completed = false;
+    current_status.task_completed = trinary_fluents::FALSE;
     task_status_->update(current_status);
 
     auto response = std::make_shared<Behaviour::Result>();
@@ -85,7 +85,11 @@ void ActionServerNode::execute(
     while (rclcpp::ok())
     {
         task_status_->getLatest(current_status);
-        if (current_status.task_completed) {
+        if (current_status.task_completed == trinary_fluents::TRUE) {
+            RCLCPP_INFO(this->get_logger(),
+                "Current status: goal_in=%d, task_completed=%d",
+                current_status.goal_in,
+                static_cast<int>(current_status.task_completed));
             break;
         }
 
@@ -101,7 +105,11 @@ void ActionServerNode::execute(
 
     response->result.stamp = this->now();
     task_status_->getLatest(current_status);
-    response->result.trinary.value = current_status.task_completed ? bdd_ros2_interfaces::msg::Trinary::TRUE : bdd_ros2_interfaces::msg::Trinary::FALSE;
+    response->result.trinary.value = current_status.task_completed == trinary_fluents::TRUE
+        ? bdd_ros2_interfaces::msg::Trinary::TRUE
+        : (current_status.task_completed == trinary_fluents::FALSE
+            ? bdd_ros2_interfaces::msg::Trinary::FALSE
+            : bdd_ros2_interfaces::msg::Trinary::UNKNOWN);
 
     goal_handle->succeed(response);
     current_status.goal_in = false;

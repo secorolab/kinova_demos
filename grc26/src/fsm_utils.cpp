@@ -149,7 +149,7 @@ void FSMInterface::normalize_angle_diff(double& angle_diff)
 
 void FSMInterface::compute_trajectory()
 {
-  constexpr double trajectory_max_vel = 0.08; // m/s
+  constexpr double trajectory_max_vel = 0.15; // m/s
   constexpr double trajectory_max_acc = 0.10; // m/s^2
   trajectory_object_ = std::make_unique<TrajectoryGenerator>(
     arm_kinematics_->pose(),
@@ -162,12 +162,19 @@ void FSMInterface::compute_trajectory()
 
 void FSMInterface::human_interaction_monitoring(double corrected_external_force_magnitude)
 {
-  printf("[Corrected external] force magnitude: %6.2f N\n", corrected_external_force_magnitude);
+  double weight_diff_z = weight_of_tray + system_state.ft_sensor.wrench_BL[2];
+  double diff_from_euclidean_norm = std::abs(corrected_external_force_magnitude - weight_of_tray);
+  // printf("[Corrected external] force magnitude: %6.2f N\n", corrected_external_force_magnitude);
+  // printf("[Gripper] measured z-axis force: %6.2f N\n", system_state.ft_sensor.wrench_BL[2]);
+  // printf("[weight_diff_z] %6.2f N, [diff_from_euclidean_norm] %6.2f N\n", weight_diff_z, diff_from_euclidean_norm);
+
   if (human_interaction_detected) 
   {
-    if (corrected_external_force_magnitude <= task_spec.collaborate_spec.external_force_deadband)
+    if ((std::abs(weight_diff_z) < task_spec.collaborate_spec.external_force_deadband) ||
+    (diff_from_euclidean_norm < task_spec.collaborate_spec.external_force_deadband))
     {
       interaction_counter += 1;
+      // printf("[Human Interaction] follow traj counter incremented: %d\n", interaction_counter);
     }
     else
     {
@@ -179,7 +186,7 @@ void FSMInterface::human_interaction_monitoring(double corrected_external_force_
     }
   }
   else {
-    if (corrected_external_force_magnitude > task_spec.collaborate_spec.external_force_deadband)
+    if (std::abs(weight_diff_z) > task_spec.collaborate_spec.external_force_deadband)
     {
       interaction_counter += 1;
     }
@@ -294,22 +301,20 @@ void FSMInterface::check_post_condition(events *eventData, SystemState& system_s
   if (condition_met)
   {
     printf("Post condition met\n");
-    if (fsm_execution_state == S_M_TOUCH_TABLE){
-      task_status.is_obj_located_at_pick_location = false;
-      task_status.is_obj_located_at_place_location = false;
-      task_status.is_obj_held_by_robot = false;
-      task_status.task_completed = false;
+    if (task_status.fsm_execution_state == S_M_TOUCH_TABLE){
+      task_status.is_obj_located_at_pick_location = trinary_fluents::TRUE;
+      task_status.task_completed = trinary_fluents::FALSE;
       task_status.is_pick_start = true;
       // produce_event(eventData, E_ENTER_IDLE);
       produce_event(eventData, E_M_SLIDE_ALONG_TABLE_CONFIG);
       printf("Completed touch table behavior\n");
     }
-    else if (fsm_execution_state == S_M_SLIDE_ALONG_TABLE){
+    else if (task_status.fsm_execution_state == S_M_SLIDE_ALONG_TABLE){
       printf("Completed slide along table behavior\n");
-      task_status.is_obj_located_at_pick_location = true;
-      task_status.is_obj_located_at_place_location = false;
-      task_status.is_obj_held_by_robot = false;
-      task_status.task_completed = false;
+      task_status.is_obj_located_at_pick_location = trinary_fluents::TRUE;
+      task_status.is_obj_located_at_place_location = trinary_fluents::FALSE;
+      task_status.is_obj_held_by_robot = trinary_fluents::FALSE;
+      task_status.task_completed = trinary_fluents::FALSE;
       if (system_state.gripper.present) {
           produce_event(eventData, E_M_GRASP_OBJECT_CONFIG);
         }
@@ -318,15 +323,15 @@ void FSMInterface::check_post_condition(events *eventData, SystemState& system_s
         produce_event(eventData, E_M_COLLABORATE_CONFIG);
       }
     }
-    else if (fsm_execution_state == S_M_GRASP_OBJECT){
-      task_status.is_obj_located_at_pick_location = true;
-      task_status.is_obj_located_at_place_location = false;
-      task_status.is_obj_held_by_robot = true;
-      task_status.task_completed = false;
+    else if (task_status.fsm_execution_state == S_M_GRASP_OBJECT){
+      task_status.is_obj_located_at_pick_location = trinary_fluents::TRUE;
+      task_status.is_obj_located_at_place_location = trinary_fluents::FALSE;
+      task_status.is_obj_held_by_robot = trinary_fluents::TRUE;
+      task_status.task_completed = trinary_fluents::FALSE;
       task_status.is_pick_end = true;
       task_status.is_place_start = true;
 
-      if (!system_state.gripper.gripper_control_completed) {
+      if (!system_state.gripper.gripper_control_completed && system_state.gripper.is_gripper_moving) {
         printf("Gripper command in progress: target position = %6.2f\n", task_spec.gripper.position);
         printf("Though post condition is met, waiting for gripper command to complete before proceeding\n");
       }
@@ -340,19 +345,19 @@ void FSMInterface::check_post_condition(events *eventData, SystemState& system_s
         }
       }
     }
-    else if (fsm_execution_state == S_M_COLLABORATE){
-      task_status.is_obj_located_at_pick_location = false;
+    else if (task_status.fsm_execution_state == S_M_COLLABORATE){
+      task_status.is_obj_located_at_pick_location = trinary_fluents::FALSE;
       double distance_to_final_pose = std::abs(std::sqrt(std::pow(arm_kinematics_->pose().p.x() - final_ee_pose_.p.x(), 2) +
                                       std::pow(arm_kinematics_->pose().p.y() - final_ee_pose_.p.y(), 2) +
                                       std::pow(arm_kinematics_->pose().p.z() - final_ee_pose_.p.z(), 2)));
       if (distance_to_final_pose <= placement_threshold) {
-        task_status.is_obj_located_at_place_location = true;
+        task_status.is_obj_located_at_place_location = trinary_fluents::TRUE;
       }
       else {
-        task_status.is_obj_located_at_place_location = false;
+        task_status.is_obj_located_at_place_location = trinary_fluents::FALSE;
       }
-      task_status.is_obj_held_by_robot = true;
-      task_status.task_completed = false;
+      task_status.is_obj_held_by_robot = trinary_fluents::TRUE;
+      task_status.task_completed = trinary_fluents::FALSE;
       printf("Completed collaborate behavior\n");
       if (system_state.gripper.present) {
           produce_event(eventData, E_M_RELEASE_OBJECT_CONFIG);
@@ -361,20 +366,20 @@ void FSMInterface::check_post_condition(events *eventData, SystemState& system_s
         produce_event(eventData, E_ENTER_IDLE);
       }
     }
-    else if (fsm_execution_state == S_M_RELEASE_OBJECT){
+    else if (task_status.fsm_execution_state == S_M_RELEASE_OBJECT){
       printf("Completed release object behavior\n");
-      task_status.is_obj_held_by_robot = false;
-      task_status.is_obj_located_at_pick_location = false;
+      task_status.is_obj_held_by_robot = trinary_fluents::FALSE;
+      task_status.is_obj_located_at_pick_location = trinary_fluents::FALSE;
       double distance_to_final_pose = std::abs(std::sqrt(std::pow(arm_kinematics_->pose().p.x() - final_ee_pose_.p.x(), 2) +
                                       std::pow(arm_kinematics_->pose().p.y() - final_ee_pose_.p.y(), 2) +
                                       std::pow(arm_kinematics_->pose().p.z() - final_ee_pose_.p.z(), 2)));
       if (distance_to_final_pose <= placement_threshold) {
-        task_status.is_obj_located_at_place_location = true;
-        task_status.task_completed = true;
+        task_status.is_obj_located_at_place_location = trinary_fluents::TRUE;
+        task_status.task_completed = trinary_fluents::TRUE;
       }
       else {
-        task_status.is_obj_located_at_place_location = false;
-        task_status.task_completed = false;
+        task_status.is_obj_located_at_place_location = trinary_fluents::FALSE;
+        task_status.task_completed = trinary_fluents::FALSE;
       }
       task_status.is_place_end = true;
       produce_event(eventData, E_ENTER_IDLE);

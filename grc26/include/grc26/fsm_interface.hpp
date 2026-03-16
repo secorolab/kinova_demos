@@ -50,7 +50,7 @@
 
 #define NUM_JOINTS 7
 
-#define KINOVA_TAU_CMD_LIMIT 30.0
+#define KINOVA_TAU_CMD_LIMIT 50.0
 // To avoid singularity, using -45.0 (lt), when starting from 'B' joystick position
 #define JOINT_3_ANGLE_LIMIT_DEG_UL -45      // 147.83 (lt)
 #define JOINT_3_ANGLE_LIMIT_DEG_LL -144     // -148.8 (gt)
@@ -68,7 +68,7 @@ public:
 
   int get_current_state() const { return fsm.currentStateIndex; }
   bool is_in_comm_with_hw() const { return in_comm_with_hw; }
-  e_states get_fsm_execution_state() const { return fsm_execution_state; }
+  e_states get_fsm_execution_state() const { return task_status.fsm_execution_state; }
 
   // FSM methods
   void configure(events *eventData, SystemState& system_state);
@@ -127,14 +127,14 @@ private:
   bool is_trajectory_computed_ = false;
   std::chrono::steady_clock::time_point trajectory_start_time_{};
   bool human_interaction_detected = false;
-  int interaction_detection_counter_limit = 10;
-  int loss_of_interaction_detection_counter_limit = 2000;
+  int interaction_detection_counter_limit = 15;
+  int loss_of_interaction_detection_counter_limit = 500;
   int interaction_counter = 0;
   double placement_threshold = 0.05; // m
-  double weight_of_tray = 12.0; // N
+  double weight_of_tray = 8.0; // N
+  double use_traj_controller = false;
 
   bool in_comm_with_hw;
-  e_states fsm_execution_state;
 
   std::unique_ptr<ArmKDLModel> model_;
   std::unique_ptr<VereshchaginSolver> solver_;

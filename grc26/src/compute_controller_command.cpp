@@ -65,7 +65,7 @@ void ComputeControllerCommand::compute(
                 double err = task.ee_linear.velocity[i] - ee_twist.vel[i];
                 double ctrl_out = controllers_.cart_ctrl[i].control(err, dt);
                 beta(i) = 0.0;
-                f_ext.back()(i) = - ctrl_out; // ensure no external force in linear axes for velocity control
+                f_ext.back()(i) = - ctrl_out;
                 capture_pid_axis(i, controllers_.cart_ctrl[i], err, ctrl_out);
                 break;
             }
@@ -87,6 +87,17 @@ void ComputeControllerCommand::compute(
                 {
                     printf("Position error in axis %d: %f, velocity: %f, beta: %f\n", i, pos_error, ee_twist.vel[i], beta(i));
                 }
+                break;
+            }
+
+            case LinearMode::Trajectory:
+            {
+                double vel_err = task.ee_linear.velocity[i] - ee_twist.vel[i];
+                double pos_err = task.ee_linear.position[i] - ee_pos[i];
+
+                double ctrl_out = controllers_.cart_ctrl[i].control_traj(pos_err, vel_err);
+                f_ext.back()(i) = - ctrl_out;
+                capture_pid_axis(i, controllers_.cart_ctrl[i], pos_err, ctrl_out);
                 break;
             }
 
@@ -131,7 +142,7 @@ void ComputeControllerCommand::compute(
             // printf("%f, %f, %f\n", 
             //     desired_ee_rot_(2,0), desired_ee_rot_(2,1), desired_ee_rot_(2,2));
 
-            printf("[Orientation control]: RPY error [%f, %f, %f]\n", diff(0), diff(1), diff(2));
+            // printf("[Orientation control]: RPY error [%f, %f, %f]\n", diff(0), diff(1), diff(2));
 
             for (int i = 0; i < 3; ++i){
                 const double rot_err = diff(i);
@@ -140,7 +151,7 @@ void ComputeControllerCommand::compute(
                     const double pid_output = controllers_.cart_ctrl[i+3].control(rot_err, dt);
                     f_ext[seg](3 + i) = -pid_output;
                     capture_pid_axis(3 + i, controllers_.cart_ctrl[i+3], rot_err, pid_output);
-                    printf("[Orientation control]: external torque for axis %d: %f\n", i, pid_output);
+                    // printf("[Orientation control]: external torque for axis %d: %f\n", i, pid_output);
                     // beta(3 + i) = controllers_.cart_ctrl[i+3].control(diff(i));
                     // printf("[Orientation control]: beta for axis %d: %f\n", i, beta(3 + i));
                 }

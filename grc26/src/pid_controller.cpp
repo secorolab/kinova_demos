@@ -45,6 +45,23 @@ void PID::set_params(double p_gain,
     d_signal_filter = LowPassFilter(lp_filter_alpha);
 }
 
+double PID::control_traj(double pos_error, double vel_error)
+{
+    const double p_term = kp * pos_error;
+    const double d_term = kd * vel_error;
+    double out = p_term + d_term;
+
+    if (out > saturation_limit)  out =  saturation_limit;
+    if (out < -saturation_limit) out = -saturation_limit;
+
+    last_error  = pos_error;
+    last_p_term = p_term;
+    last_i_term = 0.0;
+    last_d_term = d_term;
+    last_output = out;
+    return out;
+}
+
 double PID::control(double error, double dt)
 {
     if (dt <= 0.0) {dt = 1e-3;}  // safety fallback
@@ -59,16 +76,6 @@ double PID::control(double error, double dt)
         err_last = error;
         first_update = false;
     } // handle first update case to prevent large derivative kick
-    
-    if (stiffness_control_mode)
-    {
-        last_error = error;
-        last_p_term = kp * effective_error;
-        last_i_term = 0.0;
-        last_d_term = 0.0;
-        last_output = last_p_term;
-        return last_output;
-    }
 
     // computing derivative term
     double err_diff = (error - err_last) / dt;

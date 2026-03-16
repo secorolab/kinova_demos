@@ -28,9 +28,10 @@ class PID {
     void set_p_gain(double p_gain) { kp = p_gain; }
     void set_i_gain(double i_gain) { ki = i_gain; }
     void set_d_gain(double d_gain) { kd = d_gain; }
-    void set_stiffness_control_mode(bool mode) { stiffness_control_mode = mode; }
 
     double control(double error, double dt = 1.0);
+
+    double control_traj(double pos_error, double vel_error);
 
   public:
     double err_integ;
@@ -44,7 +45,6 @@ class PID {
     double lp_filter_alpha;
     double saturation_limit;
     bool first_update = true;
-    bool stiffness_control_mode = false;
     LowPassFilter d_signal_filter;
 
     double last_error = 0.0;

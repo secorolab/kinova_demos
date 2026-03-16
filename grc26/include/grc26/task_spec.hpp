@@ -11,7 +11,8 @@ enum class LinearMode : uint8_t
     None = 0,
     Velocity,
     Position,
-    Force
+    Force,
+    Trajectory // should include both position and velocity setpoints
 };
 
 enum class OrientationMode : uint8_t

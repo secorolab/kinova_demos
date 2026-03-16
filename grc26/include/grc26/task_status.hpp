@@ -6,20 +6,28 @@
 #include <cstdint>
 
 #include "unique_identifier_msgs/msg/uuid.hpp"
+#include "grc26/kinova_single_arm_demo.fsm.hpp"
+
+enum class trinary_fluents : int
+{
+    FALSE = 0,
+    TRUE = 1,
+    UNKNOWN = 2
+};
 
 struct TaskStatusData
 {
     unique_identifier_msgs::msg::UUID bhv_ctx_id;
-    bool goal_in = false;
-    bool task_completed = false;
-    bool is_obj_located_at_pick_location = false;
-    bool is_obj_held_by_robot = false;
-    bool is_obj_located_at_place_location = false;
-    bool is_pick_start = false;
-    bool is_pick_end = false;
-    bool is_place_start = false;
-    bool is_place_end = false;
-
+    bool goal_in = 0;
+    trinary_fluents task_completed = trinary_fluents::UNKNOWN;
+    trinary_fluents is_obj_located_at_pick_location = trinary_fluents::UNKNOWN;
+    trinary_fluents is_obj_held_by_robot = trinary_fluents::UNKNOWN;
+    trinary_fluents is_obj_located_at_place_location = trinary_fluents::UNKNOWN;
+    bool is_pick_start = 0;
+    bool is_pick_end = 0;
+    bool is_place_start = 0;
+    bool is_place_end = 0;
+    e_states fsm_execution_state = e_states::S_IDLE;
     uint64_t sequence_number = 0;
     std::chrono::high_resolution_clock::time_point timestamp;
 };
