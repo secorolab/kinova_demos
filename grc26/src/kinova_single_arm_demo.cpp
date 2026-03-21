@@ -66,13 +66,13 @@ int main(int argc, char ** argv)
   SystemState system_state;
   system_state.gripper.present = true;
   system_state.arm.present = true;
-  system_state.ft_sensor.present = true;
+  system_state.ft_sensor.present = false;
 
   TaskStatusData status;
 
   robif2b_kinova_gen3_nbx arm;
   arm.conf = {
-        .ip_address = "192.168.1.10",
+        .ip_address = "192.168.1.12",
         .port = 10000,
         .port_real_time = 10001,
         .user = "admin",

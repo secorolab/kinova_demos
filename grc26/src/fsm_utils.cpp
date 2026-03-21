@@ -253,6 +253,7 @@ void FSMInterface::check_post_condition(events *eventData, SystemState& system_s
           value = arm_kinematics_->pose().p[constraint.axis];
         else if (constraint.axis == 3)
           value = system_state.gripper.pos_msr[0];
+          // printf("Check: gripper current position: %6.2f, expected (post-cond): %6.2f\n", system_state.gripper.pos_msr[0], constraint.value);
         break;
 
       case ConstraintType::Velocity:
@@ -333,6 +334,7 @@ void FSMInterface::check_post_condition(events *eventData, SystemState& system_s
 
       if (!system_state.gripper.gripper_control_completed && system_state.gripper.is_gripper_moving) {
         printf("Gripper command in progress: target position = %6.2f\n", task_spec.gripper.position);
+        printf("Gripper current position: %6.2f\n", system_state.gripper.pos_msr[0]);
         printf("Though post condition is met, waiting for gripper command to complete before proceeding\n");
       }
       else

@@ -23,7 +23,7 @@ void FSMInterface::configure(events *eventData, SystemState& system_state){
   // Initialize final EE pose for trajectory tracking
   final_ee_pose_ = KDL::Frame(
                     KDL::Rotation::RPY(-1.55, 0.05, -2.80), 
-                    KDL::Vector(0.24, -0.5, 0.15));
+                    KDL::Vector(0.24, -0.5, 0.35));
 
   // initialise KDL model of the arm from URDF
   model_ = std::make_unique<ArmKDLModel>();
@@ -195,7 +195,7 @@ void FSMInterface::idle(events *eventData, SystemState& system_state){
 
 void FSMInterface::execute(events *eventData, SystemState& system_state){
 
-  // task_status.goal_in = true; // TODO: comment this line. Used for testing
+  task_status.goal_in = true; // TODO: comment this line. Used for testing
   if (!task_triggered && task_status.goal_in) 
   {
     task_triggered = true;
@@ -203,6 +203,7 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
     // produce_event(eventData, E_M_TOUCH_TABLE_CONFIG);
     // produce_event(eventData, E_M_GRASP_OBJECT_CONFIG);
     // produce_event(eventData, E_M_RELEASE_OBJECT_CONFIG);
+    // produce_event(eventData, E_M_COLLABORATE_CONFIG);
   }
   // printf("\n\n");
   if (false) printf("[EE pose]: [%6.2f, %6.2f, %6.2f]\n", arm_kinematics_->pose().p.x(), arm_kinematics_->pose().p.y(), arm_kinematics_->pose().p.z());
@@ -234,15 +235,17 @@ void FSMInterface::execute(events *eventData, SystemState& system_state){
       {
         printf("[Collaborate] Waiting until corrected wrench is available\n");
       }
-      
-      // ************** Monitoring of ft-sensor readings **************
-      // get magnitude of corrected external force for interaction detection
-      double corrected_external_force_magnitude = std::sqrt(
-        ft_readings_deviation[0] * ft_readings_deviation[0] +
-        ft_readings_deviation[1] * ft_readings_deviation[1] +
-        ft_readings_deviation[2] * ft_readings_deviation[2]);
+      else{
+        // ************** Monitoring of ft-sensor readings **************
+        // get magnitude of corrected external force for interaction detection
+        double corrected_external_force_magnitude = std::sqrt(
+          ft_readings_deviation[0] * ft_readings_deviation[0] +
+          ft_readings_deviation[1] * ft_readings_deviation[1] +
+          ft_readings_deviation[2] * ft_readings_deviation[2]);  
+        human_interaction_monitoring(corrected_external_force_magnitude);
+      }
 
-      human_interaction_monitoring(corrected_external_force_magnitude);
+      // to test collaboration
       // human_interaction_detected = true;
 
       printf("HUMAN INTERACTION DETECTED: %s\n", human_interaction_detected ? "YES" : "NO");
@@ -655,7 +658,7 @@ void FSMInterface::grasp_object_behavior_config(events *eventData, SystemState& 
   task_spec.post_condition.constraints[0].type = ConstraintType::Position;
   task_spec.post_condition.constraints[0].axis = 3; // gripper axis
   task_spec.post_condition.constraints[0].op = CompareOp::GreaterEqual;
-  task_spec.post_condition.constraints[0].value = 65; // fully closed
+  task_spec.post_condition.constraints[0].value = 60; // fully closed
 
   produce_event(eventData, E_M_GRASP_OBJECT_CONFIGURED);
 }
@@ -704,9 +707,9 @@ void FSMInterface::collaborate_behavior_config(events *eventData, SystemState& s
 
   task_spec.follow_trajectory = true;
   task_spec.collaborate_spec.enabled = true; // current logic: if enabled, start traj following, then on human intervention, switch to collaboration
-  task_spec.collaborate_spec.magnification_factor = 6.0;    // scale
+  task_spec.collaborate_spec.magnification_factor = 6.0;     // scale
   task_spec.collaborate_spec.external_force_deadband  = 3.5; // N
-  task_spec.collaborate_spec.f_ext_saturation_limit = 7.0;  // N
+  task_spec.collaborate_spec.f_ext_saturation_limit = 7.0;   // N
 
   task_spec.post_condition.available = true;
   task_spec.post_condition.num_constraints = 2;
@@ -756,7 +759,7 @@ void FSMInterface::release_object_behavior_config(events *eventData, SystemState
   task_spec.post_condition.constraints[0].type = ConstraintType::Position;
   task_spec.post_condition.constraints[0].axis = 3;     // gripper axis
   task_spec.post_condition.constraints[0].op = CompareOp::LessEqual;
-  task_spec.post_condition.constraints[0].value = 20.0;  // fully closed
+  task_spec.post_condition.constraints[0].value = 20.0;  // sufficiently open
 
   produce_event(eventData, E_M_RELEASE_OBJECT_CONFIGURED);
 }

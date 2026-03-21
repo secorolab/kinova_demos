@@ -1,17 +1,17 @@
 linear_traj_pid:
   x:
-    kp: 1000.0
-    ki: 100.0
-    kd: 2.0
+    kp: 1200.0
+    ki: 0.0
+    kd: 500.0
     error_sum_tol: 0.4
     decay_rate: 0.1
     dead_zone_limit: 0.001
     lp_filter_alpha: 0.02
     saturation_limit: 60.0
   y:
-    kp: 1000.0
-    ki: 100.0
-    kd: 2.0
+    kp: 1200.0
+    ki: 0.0
+    kd: 500.0
     error_sum_tol: 0.4
     decay_rate: 0.1
     dead_zone_limit: 0.001
@@ -19,8 +19,8 @@ linear_traj_pid:
     saturation_limit: 60.0
   z:
     kp: 1200.0
-    ki: 100.0
-    kd: 2.0
+    ki: 0.0
+    kd: 500.0
     error_sum_tol: 0.4
     decay_rate: 0.1
     dead_zone_limit: 0.001
